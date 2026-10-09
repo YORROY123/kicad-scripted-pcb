@@ -1,0 +1,9 @@
+(version 1)
+# 市电与低压之间的空气间隙(爬电另靠开槽)。只是设计目标,不是安规认证。
+(rule "mains_to_lv"
+  (condition "A.NetClass == 'Mains' && B.NetClass != 'Mains'")
+  (constraint clearance (min 3.0mm)))
+# 不同市电网之间(同一路的 NO/COM/NC、相邻两路):端子台 5.08mm 脚距留下的间隙
+(rule "mains_to_mains"
+  (condition "A.NetClass == 'Mains' && B.NetClass == 'Mains' && A.Net != B.Net")
+  (constraint clearance (min 2.4mm)))
