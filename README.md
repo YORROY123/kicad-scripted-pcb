@@ -14,7 +14,7 @@ built and are listed below.
 |---|---|---|
 | ![usbc-ldo](boards/usbc-ldo/board-top.png) | **usbc-ldo**: USB-C 5 V → 3.3 V LDO → LED. 40 × 24 mm, 2 layers. Includes an ngspice power-path simulation. | ERC 0, DRC 0, schematic parity |
 | ![esp32c3](boards/esp32c3/board-top.png) | **esp32c3**: ESP32-C3 minimal board with native USB, AP2112K LDO, RESET/BOOT, LEDs and an 8-pin header. 32 × 46 mm. | ERC 0, DRC 0, schematic parity, pin-by-pin netlist check |
-| ![relay8](boards/relay8/board-top.png) | **relay8**: ESP32-C3 + ULN2803 driving 8 mains relays (NO/COM/NC terminals), with isolation slots and custom mains clearance rules. 150 × 95 mm. **Not safety-certified.** | ERC 0, DRC errors 0 (51 silkscreen warnings listed), schematic parity |
+| ![relay8](boards/relay8/board-top.png) | **relay8**: ESP32-C3 + ULN2803 driving 8 mains relays (NO/COM/NC terminals), with isolation slots and custom mains clearance rules. 150 × 95 mm. **Not safety-certified.** | ERC 0, DRC errors 0 (43 silkscreen-clipped-by-slot/edge warnings listed), schematic parity |
 
 Each ESP32 board has a `FIRMWARE.md` with the pin map, flashing steps, a first program, and, for
 relay8, the mains wiring.

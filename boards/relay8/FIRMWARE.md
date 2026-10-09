@@ -64,7 +64,15 @@ and expect roughly 100,000 operations at rated load.
 ## Mains wiring: the board is only a switch
 
 Mains does **not** power the board and does not enter it anywhere else. Each channel is an
-independent switch on its own 3-pin terminal (J11–J18), printed **NO · COM · NC**:
+independent switch on its own green 3-pin terminal (J11–J18, along the top edge, one above each
+relay K1–K8). The silkscreen under each terminal reads **NC · COM · NO** from left to right
+(component side up, terminals at the top). The labels are generated from the nets the pads are
+actually on, so they cannot disagree with the circuit:
+
+![terminal labels](terminals-closeup.png)
+
+To switch an appliance: cut **only its live wire**, connect the supply end to **COM** and the
+appliance end to **NO**. Leave neutral and earth uncut.
 
 - **COM**: common contact
 - **NO**: normally open. Connected to COM only while the relay is on.

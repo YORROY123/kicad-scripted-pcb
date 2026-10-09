@@ -10,7 +10,7 @@
 |---|---|---|
 | ![usbc-ldo](boards/usbc-ldo/board-top.png) | **usbc-ldo**:USB-C 5V → 3.3V LDO → LED。40 × 24 mm 雙層板,附 ngspice 電源模擬 | ERC 0、DRC 0、原理圖一致 |
 | ![esp32c3](boards/esp32c3/board-top.png) | **esp32c3**:ESP32-C3 最小系統板,原生 USB、AP2112K、RESET/BOOT、LED、8 pin 排針。32 × 46 mm | ERC 0、DRC 0、原理圖一致、網表逐腳比對 |
-| ![relay8](boards/relay8/board-top.png) | **relay8**:ESP32-C3 + ULN2803 驅動 8 路市電繼電器(NO/COM/NC 端子),有隔離開槽和自訂市電間距規則。150 × 95 mm。**未經安規認證** | ERC 0、DRC 錯誤 0(51 個絲印警告已列出)、原理圖一致 |
+| ![relay8](boards/relay8/board-top.png) | **relay8**:ESP32-C3 + ULN2803 驅動 8 路市電繼電器(NO/COM/NC 端子),有隔離開槽和自訂市電間距規則。150 × 95 mm。**未經安規認證** | ERC 0、DRC 錯誤 0(43 個絲印被開槽/板邊裁切的警告已列出)、原理圖一致 |
 
 兩塊 ESP32 板都附有 `FIRMWARE.md`(給寫韌體的人看):腳位表、燒錄步驟、第一支程式;relay8 另外附市電接線說明。
 

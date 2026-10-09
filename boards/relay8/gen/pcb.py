@@ -22,8 +22,12 @@ import mains  # noqa: E402
 PCB = ROOT / "relay8.kicad_pcb"
 
 TERM_Y = 5.64      # 端子台焊盘行:转 180° 后 courtyard 上沿离板缘约 0.5mm
-RELAY_Y = 30.3     # 继电器 COM 焊盘:继电器 courtyard 上沿刚好在端子台 courtyard 下方
+# 继电器 COM 焊盘。端子台 courtyard 下沿 11.4、继电器 courtyard 上沿 RELAY_Y − 18.59:
+# 中间留 ~2.8mm 印 NO / COM / NC —— 接线的人只看得到板面,不能靠文件记脚位。
+RELAY_Y = 32.8
+LABEL_BELOW = 12.8 - TERM_Y   # 端子标签在端子焊盘下方多少 mm(标签中心约在 y = 12.8)
 PITCH = 18.0       # 每路栏宽
+LED_Y = RELAY_Y + 7.7   # 指示灯一排,紧贴继电器 courtyard 下方
 
 
 def xc(ch: int) -> float:
@@ -34,8 +38,8 @@ place = {}
 for ch in range(1, 9):
     place[f"J{10 + ch}"] = (xc(ch) + 5.08, TERM_Y, 180)   # 端子台,接线口朝上缘
     place[f"K{ch}"] = (xc(ch), RELAY_Y, 90)               # 继电器,触点朝上
-    place[f"R{10 + ch}"] = (xc(ch) - 4.5, 38.0, 90)        # 指示灯限流
-    place[f"D{10 + ch}"] = (xc(ch) + 4.5, 38.0, 90)        # 指示灯
+    place[f"R{10 + ch}"] = (xc(ch) - 4.5, LED_Y, 90)       # 指示灯限流
+    place[f"D{10 + ch}"] = (xc(ch) + 4.5, LED_Y, 90)       # 指示灯
 
 # ESP32 模块转 180°:天线朝下缘。原本左排的引脚(3V3、EN、IO8、IO9)转到右侧。
 MX, MY = 128.0, 95.0 - 18.64
@@ -47,7 +51,7 @@ def module_pin_y(n: int) -> float:
 
 
 place.update({
-    "U3": (75.0, 46.0, 90),            # ULN2803:输出朝上(O1 在左对 K1),输入朝下
+    "U3": (75.0, LED_Y + 8.0, 90),     # ULN2803:输出朝上(O1 在左对 K1),输入朝下
     "U1": (MX, MY, 180),
     # 模块右侧(x > 137.74):去耦、EN 的 RC、IO8/IO9 上拉
     "C3": (140.0, module_pin_y(1) - 0.4, 90),
@@ -98,6 +102,7 @@ def stage_place() -> None:
     slots = mains.add_slots(board)
     tracks = mains.add_mains_tracks(board)
     mains.add_routing_keepouts(board)
+    mains.add_terminal_labels(board, LABEL_BELOW)
     board.Save(str(PCB))
     (ROOT / "relay8.kicad_dru").write_text(mains.DRU, encoding="utf-8", newline="\n")
     print(f"mains: {tracks} tracks, {slots} slots, routing keepouts on 8 channels; wrote relay8.kicad_dru")

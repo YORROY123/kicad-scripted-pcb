@@ -83,6 +83,35 @@ def add_slots(board) -> int:
     return n
 
 
+def add_terminal_labels(board, below_pads: float) -> int:
+    """在每个端子焊盘下方 below_pads mm 处印 NO / COM / NC。
+
+    文字取自焊盘实际所在的网(RL3_NO → "NO"),不是写死的顺序:接线的人只看得到
+    板面,丝印必须跟电路一致,改了接法丝印也跟着变。坐标相对焊盘(板上的绝对坐标),
+    第一版传了板框坐标,字全印到了板外 —— DRC 不查「字在不在该在的地方」,是放大
+    渲染图才看出来的。端子的位号(J11…)让给标签,移到 F.Fab。
+    """
+    # 通道由继电器旁的 K1…K8 位号标识;再印一行 CH1… 会压到继电器丝印外框。
+    n = 0
+    for _relay, term in channels(board):
+        term.Reference().SetLayer(pcbnew.F_Fab)
+        for pad in term.Pads():
+            x, y = pad_xy(term, pad.GetNumber())
+            _silk_text(board, pad.GetNetname().split("_")[-1], x, y + below_pads, 1.2)
+            n += 1
+    return n
+
+
+def _silk_text(board, text: str, x: float, y: float, size: float) -> None:
+    t = pcbnew.PCB_TEXT(board)
+    t.SetText(text)
+    t.SetLayer(pcbnew.F_SilkS)
+    t.SetPosition(_vec(x, y))
+    t.SetTextSize(pcbnew.VECTOR2I(mm(size), mm(size)))
+    t.SetTextThickness(mm(size * 0.15))
+    board.Add(t)
+
+
 def _rule_area(board, pts, name, *, no_tracks: bool, no_fill: bool) -> None:
     z = pcbnew.ZONE(board)
     z.SetIsRuleArea(True)
