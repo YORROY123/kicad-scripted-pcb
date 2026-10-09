@@ -1,11 +1,14 @@
-"""八路继电器板的摆放与市电处理。必须用 KiCad 自带的 python.exe 跑。
+"""八路继电器板(v2,一条市电线供全部)的摆放与市电处理。必须用 KiCad 自带的 python.exe 跑。
 
-    pcb.py place    网表 → 放件 → 开槽 → 市电走线 → 低压布线禁止区 → DRC 规则文件
-    (freerouting 布低压线;lib/route.py ses 导入并铺 GND —— 它会删掉所有 zone,包括禁止区)
-    pcb.py finish   补回市电走线 → GND 铺铜禁止区 → 重新填充
+    pcb.py place    网表 → 放件 → 开槽 → 市电铜(汇流排、COM/N 竖线、NO/NC、输入区)
+                    → 低压布线禁止区 → 端子丝印 → DRC 规则文件
+    (freerouting 只布低压线;lib/route.py ses 导入并铺 GND —— 它会删掉所有 zone,包括禁止区)
+    pcb.py finish   补回市电铜 → GND 铺铜禁止区 → 重新填充
 
-板子 150 × 95 mm,y 向下。上半部是市电区(端子台贴上缘、继电器触点朝上),
-y ≈ 35 以下是低压区;ESP32 天线朝下缘、远离继电器与市电。
+板子 232 × 110 mm,y 向下。上缘:J20 市电输入 + 8 个输出端子(NO · N · NC);其下两条
+B.Cu 汇流排(N、L);再下面继电器(触点朝上)。左侧:F1 → F2 → PS1(HLK-10M05,AC 脚在上,
+DC 脚在 42.5mm 下方的低压区)。y ≈ 50 以下、x > 40 是低压区;ESP32 天线朝下缘。
+几何细节与间距依据见 mains.py。
 """
 import sys
 from pathlib import Path
@@ -20,29 +23,28 @@ from pcbgen import BoardSpec, build  # noqa: E402
 import mains  # noqa: E402
 
 PCB = ROOT / "relay8.kicad_pcb"
+W, H = 232.0, 110.0
 
-TERM_Y = 5.64      # 端子台焊盘行:转 180° 后 courtyard 上沿离板缘约 0.5mm
-# 继电器 COM 焊盘。端子台 courtyard 下沿 11.4、继电器 courtyard 上沿 RELAY_Y − 18.59:
-# 中间留 ~2.8mm 印 NO / COM / NC —— 接线的人只看得到板面,不能靠文件记脚位。
-RELAY_Y = 32.8
-LABEL_BELOW = 12.8 - TERM_Y   # 端子标签在端子焊盘下方多少 mm(标签中心约在 y = 12.8)
-PITCH = 18.0       # 每路栏宽
-LED_Y = RELAY_Y + 7.7   # 指示灯一排,紧贴继电器 courtyard 下方
+# 继电器 COM 焊盘:触点焊盘(COM 上方 14.2)离 L 汇流排下沿 ≥ 2.4mm(市电 ↔ 市电)
+RELAY_Y = 44.0
+LED_Y = RELAY_Y + 7.7   # 指示灯一排,紧贴继电器与槽的下方
+LABEL_BELOW = 7.0       # 端子标签在焊盘下方多少 mm(端子 courtyard 下沿在焊盘下 5mm)
+PITCH = 24.0            # 每路栏宽:3 位 7.5mm 端子宽 23.6mm
 
 
 def xc(ch: int) -> float:
-    return 12.0 + PITCH * (ch - 1)
+    return 50.0 + PITCH * (ch - 1)
 
 
 place = {}
 for ch in range(1, 9):
-    place[f"J{10 + ch}"] = (xc(ch) + 5.08, TERM_Y, 180)   # 端子台,接线口朝上缘
-    place[f"K{ch}"] = (xc(ch), RELAY_Y, 90)               # 继电器,触点朝上
-    place[f"R{10 + ch}"] = (xc(ch) - 4.5, LED_Y, 90)       # 指示灯限流
-    place[f"D{10 + ch}"] = (xc(ch) + 4.5, LED_Y, 90)       # 指示灯
+    place[f"J{10 + ch}"] = (xc(ch) + 7.5, mains.TERM_Y, 180)   # NO @ +7.5、N @ 0、NC @ −7.5
+    place[f"K{ch}"] = (xc(ch), RELAY_Y, 90)                     # 触点朝上
+    place[f"R{10 + ch}"] = (xc(ch) - 4.5, LED_Y, 90)             # 指示灯限流
+    place[f"D{10 + ch}"] = (xc(ch) + 4.5, LED_Y, 90)             # 指示灯
 
 # ESP32 模块转 180°:天线朝下缘。原本左排的引脚(3V3、EN、IO8、IO9)转到右侧。
-MX, MY = 128.0, 95.0 - 18.64
+MX, MY = 200.0, H - 18.64
 
 
 def module_pin_y(n: int) -> float:
@@ -51,48 +53,54 @@ def module_pin_y(n: int) -> float:
 
 
 place.update({
-    "U3": (75.0, LED_Y + 8.0, 90),     # ULN2803:输出朝上(O1 在左对 K1),输入朝下
+    # 市电输入区(左上):J20 → F1(竖)→ F2 → PS1(竖,AC 在上)
+    "J20": (21.5, mains.TERM_Y, 180),   # L @ 21.5、N @ 14.0
+    "F1": (21.5, 31.0, -90),            # 夹子:L_IN @ y 31 / 37.8,L_BUS @ y 47.4 / 54.1
+    "RV1": (34.0, mains.L_BUS_Y, 90),   # 1 脚压在 L 汇流排上,2 脚压在 N 汇流排上
+    "F2": (30.5, 48.5, -90),            # L_BUS @ y 48.5 → L_PS @ y 53.6
+    "PS1": (21.0, 61.0, -90),           # AC/L (21, 61)、AC/N (13.2, 61);DC 在 y 103.5
+    "C5": (38.0, 100.0, 90),            # 5V_PS 储能,紧贴 PS1 的 DC 端
+    "D4": (48.0, 104.0, 0),             # 5V_PS → 5V_SYS
+    "D5": (48.0, 98.0, 0),              # VBUS → 5V_SYS
+    # LDO
+    "U2": (58.0, 101.0, 0),
+    "C1": (58.0, 97.0, 0),
+    "C2": (63.0, 101.0, 90),
+    # USB-C 在下缘(开口朝下),CC 电阻与 ESD 紧贴
+    "J1": (75.0, H - 4.2, 0),
+    "R1": (71.0, 97.5, 0),
+    "R2": (79.0, 97.5, 0),
+    "D1": (84.0, 100.0, 0),
+    # 电源 LED、按键、UART 排针
+    "R8": (92.0, 104.5, 0),
+    "D3": (92.0, 107.5, 0),
+    "SW1": (105.0, 104.0, 0),
+    "SW2": (120.0, 104.0, 0),
+    "J2": (135.0, 92.0, 0),
+    # ULN2803:输出朝上(O1 在左对 K1),输入朝下
+    "U3": (134.0, 62.0, 90),
+    # ESP32 与它右侧(x > 209.74)的去耦、EN 的 RC、IO8/IO9 上拉
     "U1": (MX, MY, 180),
-    # 模块右侧(x > 137.74):去耦、EN 的 RC、IO8/IO9 上拉
-    "C3": (140.0, module_pin_y(1) - 0.4, 90),
-    "R3": (140.0, module_pin_y(2) - 1.0, 90),
-    "C4": (143.0, module_pin_y(2) - 1.0, 90),
-    "R5": (140.0, module_pin_y(7), 90),
-    "R4": (143.0, module_pin_y(8), 90),
-    "R6": (116.0, MY + 3.0, 90),       # IO2(原右排第 16 脚,转 180° 后在左侧)
-    # USB-C 在左缘(开口朝左),ESD 紧贴
-    "J1": (4.2, 62.0, -90),
-    "R1": (11.0, 55.5, 90),
-    "R2": (11.0, 68.5, 90),
-    "D1": (14.0, 62.0, 0),
-    # 5V DC 插座在左下缘(开口朝左)、储能电容、OR 二极管
-    "J3": (13.8, 84.0, 0),
-    "C5": (22.0, 88.0, 0),
-    "D4": (27.0, 80.0, 0),
-    "D5": (27.0, 74.0, 0),
-    # LDO 一组与电源 LED
-    "U2": (38.0, 74.0, 0),
-    "C1": (38.0, 70.0, 0),
-    "C2": (43.0, 74.0, 90),
-    "R8": (48.0, 70.0, 0),
-    "D3": (48.0, 73.5, 0),
-    # 按键与 UART 排针
-    "SW1": (60.0, 88.0, 0),
-    "SW2": (75.0, 88.0, 0),
-    "J2": (95.0, 78.0, 0),
+    "C3": (212.0, module_pin_y(1) - 0.4, 90),
+    "R3": (212.0, module_pin_y(2) - 1.0, 90),
+    "C4": (215.0, module_pin_y(2) - 1.0, 90),
+    "R5": (212.0, module_pin_y(7), 90),
+    "R4": (215.0, module_pin_y(8), 90),
+    "R6": (188.0, MY + 3.0, 90),        # IO2(原右排第 16 脚,转 180° 后在左侧)
 })
 
 RELAY8 = BoardSpec(
     name="relay8",
-    width=150.0,
-    height=95.0,
+    width=W,
+    height=H,
     place=place,
-    power_nets=("GND", "VBUS", "+3V3", "DC_IN", "5V_SYS"),
-    overhang=("J1", "J3"),
+    power_nets=("GND", "VBUS", "+3V3", "5V_PS", "5V_SYS"),
+    overhang=("J1",),
     min_hole=0.2,
     fab_ref_libs=("Resistor_SMD", "Capacitor_SMD"),
-    # 市电网:RL1_COM … RL8_NC。通配符写成 RL?_* —— RL* 会把低压的线圈驱动网 RLY1… 也吞进来
-    netclasses=(("Mains", mains.MAINS_W, 2.4, "RL?_*"),),
+    # 市电网:RL1_NO … RL8_NC、L_IN / L_BUS / L_PS、N_BUS。
+    # RL?_* 不能写成 RL*:后者会把低压的线圈驱动网 RLY1… 也吞进来。
+    netclasses=(("Mains", mains.SWITCH_W, 2.4, "RL?_*", "L_*", "N_BUS"),),
 )
 
 
@@ -101,24 +109,25 @@ def stage_place() -> None:
     board = pcbnew.LoadBoard(str(PCB))
     slots = mains.add_slots(board)
     tracks = mains.add_mains_tracks(board)
-    mains.add_routing_keepouts(board)
-    mains.add_terminal_labels(board, LABEL_BELOW)
+    mains.add_routing_keepouts(board, W)
+    labels = mains.add_terminal_labels(board, LABEL_BELOW)
     board.Save(str(PCB))
     (ROOT / "relay8.kicad_dru").write_text(mains.DRU, encoding="utf-8", newline="\n")
-    print(f"mains: {tracks} tracks, {slots} slots, routing keepouts on 8 channels; wrote relay8.kicad_dru")
+    print(f"mains: {tracks} segments, {slots} slots, {labels} terminal labels, routing keepouts; "
+          f"wrote relay8.kicad_dru")
 
 
 def stage_finish() -> None:
     board = pcbnew.LoadBoard(str(PCB))
     tracks = mains.add_mains_tracks(board)
-    mains.add_fill_keepouts(board)
+    mains.add_fill_keepouts(board, W)
     # USB-C 外壳脚实心接地:热焊盘在板边只接得上 1 条引线(starved_thermal),外壳本就该牢接地
     for pad in board.FindFootprintByReference("J1").Pads():
         if pad.GetNumber() == "SH":
             pad.SetLocalZoneConnection(pcbnew.ZONE_CONNECTION_FULL)
     pcbnew.ZONE_FILLER(board).Fill(board.Zones())
     board.Save(str(PCB))
-    print(f"mains: re-added {tracks} tracks, GND fill keepouts on 8 channels, zones refilled")
+    print(f"mains: re-added {tracks} segments, GND fill keepouts, zones refilled")
 
 
 if __name__ == "__main__":

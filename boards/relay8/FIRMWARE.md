@@ -1,8 +1,9 @@
 # 8-channel relay board — firmware handoff and wiring
 
-> **This board switches mains (110/230 VAC).** Wiring mains can kill. A clean DRC is not a
-> safety review. Have the board and the wiring checked by someone qualified, mount it in a closed
-> enclosure, and disconnect mains before touching anything.
+> **Mains (100–240 VAC) enters this board.** It runs through the input terminal, fuses, varistor,
+> the on-board AC-DC module, two bus traces and all 8 relays. Wiring mains can kill, and a clean DRC
+> is not a safety review. Have the board and the wiring checked by someone qualified, mount it in
+> a closed enclosure, and disconnect mains before touching anything.
 
 ## Pin map
 
@@ -17,7 +18,7 @@
 | K7 | IO7 | D17 |
 | K8 | IO10 | D18 |
 
-GPIO **high** → ULN2803 channel on → relay energised (COM–NO closed) → red LED on.
+GPIO **high** → ULN2803 channel on → relay energised (live switched to NO) → red LED on.
 The ULN2803 inputs have internal pull-downs, so every relay is off while the ESP32 resets or boots.
 
 Other pins are as on the ESP32-C3 minimal board (see `../esp32c3/FIRMWARE.md`): USB on IO18/IO19,
@@ -26,14 +27,18 @@ pull-ups on IO2/IO8/IO9. There is no free GPIO left and no user LED.
 
 ## Power
 
+One mains cable powers everything.
+
 | Input | Feeds | Notes |
 |---|---|---|
-| **J3 DC jack, 5 V ≥ 2 A**, centre positive | relay coils + logic | Needed for the relays to switch |
-| USB-C | logic only | Flashing and testing; relays cannot switch on USB alone |
+| **J20 MAINS IN (L, N)**, 100–240 VAC | the 8 relay contacts **and**, through the on-board HLK-10M05 (5 V 2 A), the relay coils and the logic | Normal operation |
+| USB-C | logic only | Flashing and testing; with mains unplugged the relays cannot switch |
 
-Both inputs are diode-OR'ed (SS34) into the 3.3 V regulator, so USB and the DC jack can be
-connected at the same time without back-feeding the computer.
-All 8 relays on draw about 0.6 A from the DC jack.
+The HLK 5 V output and USB VBUS are diode-OR'ed (SS34) into the 3.3 V regulator, so USB can stay
+connected while mains is on without back-feeding the computer.
+
+Protection: **F1 T8A** (5×20 mm) in the live feed, then a 14D431K varistor across L–N, then
+**F2 T1A** (TR5) in front of the AC-DC module.
 
 ## Example (Arduino, board "ESP32C3 Dev Module", USB CDC On Boot enabled)
 
@@ -61,44 +66,43 @@ void loop() {
 Relays are slow and wear out: do not switch them faster than about once per second in a loop,
 and expect roughly 100,000 operations at rated load.
 
-## Mains wiring: the board is only a switch
+## Mains wiring
 
-Mains does **not** power the board and does not enter it anywhere else. Each channel is an
-independent switch on its own green 3-pin terminal (J11–J18, along the top edge, one above each
-relay K1–K8). The silkscreen under each terminal reads **NC · COM · NO** from left to right
-(component side up, terminals at the top). The labels are generated from the nets the pads are
-actually on, so they cannot disagree with the circuit:
+All terminals sit along the top edge; the silkscreen under each pin says what it is (generated from
+the net each pad is on, so it cannot disagree with the circuit):
 
-![terminal labels](terminals-closeup.png)
+- **J20 (far left), `N · L`**: the supply cable. Live to **L**, neutral to **N**.
+- **J11–J18, one above each relay K1–K8, `NC · N · NO`**: one appliance per channel.
 
-To switch an appliance: cut **only its live wire**, connect the supply end to **COM** and the
-appliance end to **NO**. Leave neutral and earth uncut.
-
-- **COM**: common contact
-- **NO**: normally open. Connected to COM only while the relay is on.
-- **NC**: normally closed. Connected to COM while the relay is off.
-
-Switch the **live (L)** conductor; neutral and earth go straight to the load:
+![terminal labels](terminal-labels.png)
 
 ```
- mains L ──[ fuse ]────────── COM ┐
-                                  │ relay contact (inside the board)
-              load L ──────── NO  ┘
- mains N ──────────────────────────────────── load N
- mains PE (earth) ─────────────────────────── load PE
+ supply L ──► J20 L ──[F1 T8A]── L bus ──► COM of every relay
+ supply N ──► J20 N ──────────── N bus ──► the middle pin (N) of every output terminal
+
+ appliance:  live    ──► NO   (on while the relay is on)    or NC (on while the relay is off)
+             neutral ──► N    (same terminal)
+             earth   ──► NOT on this board: connect it straight to the supply earth
 ```
 
-- Load on when the relay is on: use **NO**. Load on when the relay is off (fail-on): use **NC**.
-- Rating: **5 A per channel** at 250 VAC, set by the 2.5 mm board traces. The relay alone is rated
-  10 A. Put a fuse of 5 A or less in the live feed of each channel or upstream.
+- You do **not** have to use all 8 channels. Unused terminals stay empty.
+- Ratings: **5 A per channel** (2.5–3.5 mm traces on 1 oz copper) and **8 A in total** (bus
+  traces, F1). The relays alone are rated 10 A; the board is the limit.
 - Do not switch motors, compressors or transformers near the limit. Inrush current welds relay contacts.
 - Use wire rated for mains (≥ 0.75 mm²) and tighten the terminal screws.
 
 ## Must be checked on real hardware before mains is connected
 
 1. **NO/NC pin assignment.** Relay pins 3 = NO and 4 = NC were taken from the KiCad symbol graphic,
-   because the manufacturer's pin drawing could not be read. With a multimeter and the relay
-   unpowered, COM must show continuity to **NC**. Energise it (DC jack + firmware): COM must switch to **NO**.
-2. **Terminal block orientation.** The wire entries must face the board edge (check in KiCad's 3D view).
-3. **Creepage and clearance.** Mains-to-low-voltage spacing is ≥ 3.0 mm through air, and the slots
-   beside each COM trace are meant to make the surface path ≥ 5 mm. Have this verified.
+   because the manufacturer's pin drawing could not be read. With the board unpowered, measure
+   continuity from J20 **L** (after F1) to each channel: it must reach **NC**, not NO. With mains
+   connected and the relay energised, the live moves to **NO**. Measure with care, or with an
+   isolated low-voltage source on J20 instead of mains.
+2. **Terminal block orientation.** The wire entries must face the board edge. KiCad has no 3D model
+   for the MetzConnect Type171 blocks here, and the footprint outline is nearly symmetric, so this
+   cannot be confirmed from the files. Check it against the part's datasheet before ordering.
+3. **Creepage and clearance.** Mains-to-low-voltage spacing is ≥ 3.0 mm through air (DRC rule), and
+   the slots beside each COM trace are meant to make the surface path ≥ 5 mm. Check the PCB under the
+   AC-DC module too. Have all of this verified.
+4. **Earth.** There is no earth on the board. Appliances that need earth must get it directly from
+   the supply.

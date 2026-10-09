@@ -301,7 +301,7 @@
         "pcb_color": "rgba(0, 0, 0, 0.000)",
         "priority": -1,
         "schematic_color": "rgba(0, 0, 0, 0.000)",
-        "track_width": 2.5,
+        "track_width": 3.5,
         "tuning_profile": "",
         "via_diameter": 0.6,
         "via_drill": 0.3,
@@ -347,7 +347,7 @@
       },
       {
         "netclass": "Power",
-        "pattern": "DC_IN"
+        "pattern": "5V_PS"
       },
       {
         "netclass": "Power",
@@ -356,6 +356,14 @@
       {
         "netclass": "Mains",
         "pattern": "RL?_*"
+      },
+      {
+        "netclass": "Mains",
+        "pattern": "L_*"
+      },
+      {
+        "netclass": "Mains",
+        "pattern": "N_BUS"
       }
     ]
   },

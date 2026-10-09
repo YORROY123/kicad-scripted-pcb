@@ -1,17 +1,24 @@
-"""ESP32-C3 八路继电器板:每路 SRD 继电器切市电(NO / COM / NC 端子),ULN2803 驱动。
+"""ESP32-C3 八路继电器板,一条市电线供全部:板上 AC-DC 供电,每路输出 NO / N / NC。
 
-⚠ 继电器触点接市电(110/220VAC)。原理图与 DRC 通过 ≠ 电气安全;送厂、通电前必须由懂
-电气安全的人审查,并装在外壳里使用。
+⚠ 市电(100–240VAC)进到板上:输入端子、保险丝、压敏电阻、AC-DC 模块、L/N 汇流排、
+8 个继电器触点。原理图与 DRC 通过 ≠ 电气安全;送厂、通电前必须由懂电气安全的人审查,
+并装在外壳里使用。
 
-电源(为什么这样分):
-  - DC_IN:5V DC 插座(≥2A)直接供 8 个线圈(全吸合约 8 × 72mA ≈ 0.6A)+ 100µF 储能
-  - 5V_SYS:DC_IN 与 USB VBUS 各经一颗 SS34 并联 → AP2112K-3.3 → +3V3
-      只插 USB:MCU 能烧录、能跑,但线圈没电,继电器不动作 —— 刻意的,USB 不会被线圈拉垮
-      二极管同时防止 DC 电源倒灌进电脑的 USB 口
+市电(J20 输入 L / N):
+  - L_IN → F1(T8A,5×20)→ L_BUS:8 个继电器的 COM 全接在这条汇流排上
+  - N_BUS:输入 N 直接接到每路端子的中间一格(N),每个电器的两条线接在同一个端子
+  - RV1(14D431K 压敏电阻)跨在保险丝后的 L_BUS 与 N_BUS 之间:压敏失效短路时由 F1 断开
+  - L_BUS → F2(T1A,TR5)→ L_PS → PS1(HLK-10M05,100–240VAC → 5V 2A,宽电压所以 110/220 通吃)
+  - 总电流上限 8A(F1);每路额定 5A
+低压:
+  - 5V_PS:PS1 输出直接供 8 个线圈(全吸合约 8 × 72mA ≈ 0.6A)+ 100µF
+  - 5V_SYS:5V_PS 与 USB VBUS 各经一颗 SS34 并联 → AP2112K-3.3 → +3V3
+      只插 USB(没接市电):MCU 能烧录、能跑,但线圈没电,继电器不动作
+      二极管同时防止 5V 倒灌进电脑的 USB 口
 驱动:ULN2803A(达林顿阵列,内建续流二极管 COM 接线圈电源;输入内建下拉,开机不乱跳)
 引脚:K1–K8 ← IO0、IO1、IO3、IO4、IO5、IO6、IO7、IO10(避开 USB 18/19、UART 20/21、
       strapping 2/8/9)
-指示:每路一颗红色 LED 与线圈并联(DC_IN → 1k → LED → ULN 输出),吸合时亮
+指示:每路一颗红色 LED 与线圈并联(5V_PS → 1k → LED → ULN 输出),吸合时亮
 
 继电器引脚(KiCad Relay:SANYOU_SRD_Form_C,符号引脚无名称,依符号图形与封装确认):
   2、5 = 线圈;1 = COM;3 = NO(常开);4 = NC(常闭)
@@ -53,16 +60,29 @@ add("D1", "Power_Protection", "USBLC6-2P6", 60, 85, "USBLC6-2P6",
         "5": "VBUS", "2": "GND",
     })
 flag("VBUS", 15, 25)
-flag("GND", 22, 25)
+# GND 由 PS1 的 -Vout(power_out)驱动,不再需要 PWR_FLAG(两个 power_out 相连 ERC 会报错)
 
-# ── 5V DC 输入(继电器线圈电源)与 5V_SYS ────────────────────────────────
-add("J3", "Connector", "Barrel_Jack", 20, 125, "5V DC 2A",
-    "Connector_BarrelJack:BarrelJack_Horizontal", {"1": "DC_IN", "2": "GND"})
-flag("DC_IN", 12, 112)
-add("C5", "Device", "C_Polarized", 40, 128, "100uF", "Capacitor_SMD:CP_Elec_6.3x7.7",
-    {"1": "DC_IN", "2": "GND"})
+# ── 市电输入、保护与 AC-DC ───────────────────────────────────────────────
+TYPE171_2 = "TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13702HBWC_1x02_P7.50mm_Horizontal"
+add("J20", "Connector", "Screw_Terminal_01x02", 20, 175, "MAINS IN",
+    TYPE171_2, {"1": "L_IN", "2": "N_BUS"})
+add("F1", "Device", "Fuse", 40, 168, "T8A 250V",
+    "Fuse:Fuseholder_Clip-5x20mm_Keystone_3517_Inline_P23.11x6.76mm_D1.70mm_Horizontal",
+    {"1": "L_IN", "2": "L_BUS"})
+add("RV1", "Device", "Varistor", 55, 185, "14D431K",
+    "Varistor:RV_Disc_D15.5mm_W4.4mm_P7.5mm", {"1": "L_BUS", "2": "N_BUS"})
+add("F2", "Device", "Fuse", 70, 168, "T1A 250V",
+    "Fuse:Fuseholder_TR5_Littelfuse_No560_No460", {"1": "L_BUS", "2": "L_PS"})
+add("PS1", "Converter_ACDC", "HLK-10M05", 95, 185, "HLK-10M05",
+    "Converter_ACDC:Converter_ACDC_Hi-Link_HLK-10Mxx",
+    {"1": "L_PS", "2": "N_BUS", "3": "GND", "4": "5V_PS"})
+# 市电经端子与保险丝(passive)进来,ERC 会判 PS1 的 AC 输入「未被驱动」;这里确实是电源入口
+flag("L_PS", 82, 160)
+flag("N_BUS", 88, 160)
+add("C5", "Device", "C_Polarized", 120, 190, "100uF", "Capacitor_SMD:CP_Elec_6.3x7.7",
+    {"1": "5V_PS", "2": "GND"})
 # SS34:1 = K、2 = A
-add("D4", "Diode", "SS34", 60, 118, "SS34", "Diode_SMD:D_SMA", {"2": "DC_IN", "1": "5V_SYS"})
+add("D4", "Diode", "SS34", 60, 118, "SS34", "Diode_SMD:D_SMA", {"2": "5V_PS", "1": "5V_SYS"})
 add("D5", "Diode", "SS34", 60, 135, "SS34", "Diode_SMD:D_SMA", {"2": "VBUS", "1": "5V_SYS"})
 # 5V_SYS 只经二极管(passive)进来,ERC 会判「电源输入未被驱动」;这里确实是电源入口
 flag("5V_SYS", 72, 112)
@@ -112,26 +132,26 @@ add("U1", "RF_Module", "ESP32-C3-WROOM-02", 165, 80, "ESP32-C3-WROOM-02-N4",
 # ── ULN2803A ───────────────────────────────────────────────────────────
 uln = {str(ch): f"IN{ch}" for ch in range(1, 9)}               # I1..I8 = 1..8
 uln.update({str(19 - ch): f"RLY{ch}" for ch in range(1, 9)})   # O1..O8 = 18..11
-uln.update({"9": "GND", "10": "DC_IN"})                        # COM 接线圈电源:续流箝位
+uln.update({"9": "GND", "10": "5V_PS"})                        # COM 接线圈电源:续流箝位
 add("U3", "Transistor_Array", "ULN2803A", 215, 80, "ULN2803A",
     "Package_SO:SOIC-18W_7.5x11.6mm_P1.27mm", uln)
 
 # ── 8 个通道:继电器 + 端子 + 指示灯 ─────────────────────────────────────
+TYPE171_3 = "TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13703HBWC_1x03_P7.50mm_Horizontal"
 for ch in range(1, 9):
     col, row = (ch - 1) % 2, (ch - 1) // 2
     x0, y0 = 255 + 45 * col, 35 + 50 * row
     add(f"K{ch}", "Relay", "SANYOU_SRD_Form_C", x0, y0 + 12, "SRD-05VDC-SL-C",
         "Relay_THT:Relay_SPDT_SANYOU_SRD_Series_Form_C", {
-            "5": "DC_IN", "2": f"RLY{ch}",        # 线圈
-            "1": f"RL{ch}_COM", "3": f"RL{ch}_NO", "4": f"RL{ch}_NC",
+            "5": "5V_PS", "2": f"RLY{ch}",        # 线圈
+            "1": "L_BUS",                         # COM:全部接火线汇流排
+            "3": f"RL{ch}_NO", "4": f"RL{ch}_NC",
         })
-    # 端子顺序 NO / COM / NC,与板上丝印一致
+    # 每路一个 3 位端子:NO / N / NC。电器的火线接 NO(或 NC),零线接 N
     add(f"J{10 + ch}", "Connector", "Screw_Terminal_01x03", x0 + 26, y0 + 12, f"CH{ch}",
-        "TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-3-5.08_1x03_P5.08mm_Horizontal", {
-            "1": f"RL{ch}_NO", "2": f"RL{ch}_COM", "3": f"RL{ch}_NC",
-        })
+        TYPE171_3, {"1": f"RL{ch}_NO", "2": "N_BUS", "3": f"RL{ch}_NC"})
     add(f"R{10 + ch}", "Device", "R", x0 - 16, y0 + 4, "1k", R0402,
-        {"1": "DC_IN", "2": f"LED{ch}_A"})
+        {"1": "5V_PS", "2": f"LED{ch}_A"})
     add(f"D{10 + ch}", "Device", "LED", x0 - 16, y0 + 18, "RED", LED0805,
         {"2": f"LED{ch}_A", "1": f"RLY{ch}"})
 
