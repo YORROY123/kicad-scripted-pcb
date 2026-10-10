@@ -12,7 +12,7 @@
   - 总电流上限 8A(F1);每路额定 5A
 低压:
   - 5V_PS:PS1 输出直接供 8 个线圈(全吸合约 8 × 72mA ≈ 0.6A)+ 100µF
-  - 5V_SYS:5V_PS 与 USB VBUS 各经一颗 SS34 并联 → AP2112K-3.3 → +3V3
+  - 5V_SYS:5V_PS 与 USB VBUS 各经一颗 SS34 并联 → LP38693MP-3.3 → +3V3
       只插 USB(没接市电):MCU 能烧录、能跑,但线圈没电,继电器不动作
       二极管同时防止 5V 倒灌进电脑的 USB 口
 驱动:ULN2803A(达林顿阵列,内建续流二极管 COM 接线圈电源;输入内建下拉,开机不乱跳)
@@ -88,8 +88,10 @@ add("D5", "Diode", "SS34", 60, 135, "SS34", "Diode_SMD:D_SMA", {"2": "VBUS", "1"
 flag("5V_SYS", 72, 112)
 
 # ── 3.3V LDO ───────────────────────────────────────────────────────────
-add("U2", "Regulator_Linear", "AP2112K-3.3", 100, 30, "AP2112K-3.3",
-    "Package_TO_SOT_SMD:SOT-23-5", {"1": "5V_SYS", "3": "5V_SYS", "2": "GND", "5": "+3V3", "4": None})
+# LP38693MP-3.3(TI SNVS321O,輸入絕對最大 12V)。原本的 AP2112K 只有 6.5V:只插 USB 時
+# VBUS 經 SS34 到 5V_SYS 只有 C1 1µF,熱插拔過衝模擬到 7.7V(boards/esp32c3/sim/power_sim.py)。
+add("U2", "Regulator_Linear", "LP38693MP-3.3", 100, 30, "LP38693MP-3.3",
+    "Package_TO_SOT_SMD:SOT-223-5", {"4": "5V_SYS", "1": "5V_SYS", "5": "GND", "3": "+3V3", "2": None})
 add("C1", "Device", "C", 84, 30, "1uF", C0402, {"1": "5V_SYS", "2": "GND"})
 add("C2", "Device", "C", 116, 30, "10uF", C0805, {"1": "+3V3", "2": "GND"})
 add("C3", "Device", "C", 124, 30, "100nF", C0402, {"1": "+3V3", "2": "GND"})

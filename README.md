@@ -13,7 +13,7 @@ built and are listed below.
 | | Board | Result |
 |---|---|---|
 | ![usbc-ldo](boards/usbc-ldo/board-top.png) | **usbc-ldo**: USB-C 5 V → 3.3 V LDO → LED. 40 × 24 mm, 2 layers. Includes an ngspice power-path simulation. | ERC 0, DRC 0, schematic parity |
-| ![esp32c3](boards/esp32c3/board-top.png) | **esp32c3**: ESP32-C3 minimal board with native USB, AP2112K LDO, RESET/BOOT, LEDs and an 8-pin header. 32 × 46 mm. | ERC 0, DRC 0, schematic parity, pin-by-pin netlist check |
+| ![esp32c3](boards/esp32c3/board-top.png) | **esp32c3**: ESP32-C3 minimal board with native USB, LP38693 LDO, RESET/BOOT, LEDs and an 8-pin header. 32 × 46 mm. | ERC 0, DRC 0, schematic parity, pin-by-pin netlist check |
 | ![relay8](boards/relay8/board-top.png) | **relay8**: ESP32-C3 + ULN2803 driving 8 mains relays from **one mains cable**: on-board HLK-10M05 AC-DC (100–240 VAC), T8A fuse, varistor, L/N bus traces, per-channel NO · N · NC terminals, isolation slots and custom mains clearance rules. 232 × 110 mm. **Not safety-certified.** | ERC 0, DRC errors 0 (40 silkscreen-clipped-by-slot/edge warnings listed), schematic parity |
 
 Each ESP32 board has a `FIRMWARE.md` with the pin map, flashing steps, a first program, and, for
@@ -43,7 +43,7 @@ the exported netlist with pcbnew.
 | placement self-check | pad nets vs netlist, footprints off-board, courtyard overlap | Uses real courtyard polygons. The ESP32 module's courtyard is T-shaped, and bounding boxes reject legal positions. |
 | DRC + `--schematic-parity` | clearance, track width, edge clearance, schematic vs PCB | — |
 | custom DRC rules (`relay8.kicad_dru`) | mains ↔ low voltage ≥ 3.0 mm, mains ↔ mains ≥ 2.4 mm | Creepage around the slots is not checked by DRC. Needs a human. |
-| ngspice simulation (`usbc-ldo/sim`) | design margins | The first board's 1.1 V-dropout LDO falls out of regulation at USB's 4.40 V minimum, and its input capacitance injects ~124 µC on hot-plug (USB 2.0 limit: 50 µC). The ESP32 boards were designed from these results. |
+| ngspice simulation (`usbc-ldo/sim`) | design margins | The first board's 1.1 V-dropout LDO falls out of regulation at USB's 4.40 V minimum, and its input capacitance injects ~124 µC on hot-plug (USB 2.0 limit: 50 µC). All three boards now use LP38693 (12 V input rating): `esp32c3/sim` showed that with only 1 µF on VBUS, hot-plug cable ringing reaches 7.7–8.6 V, above the 6.5 V rating of the AP2112K the ESP32 boards first used. |
 
 ## Things that cost time (so they don't cost yours)
 

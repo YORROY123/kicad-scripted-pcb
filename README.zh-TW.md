@@ -9,7 +9,7 @@
 | | 板子 | 結果 |
 |---|---|---|
 | ![usbc-ldo](boards/usbc-ldo/board-top.png) | **usbc-ldo**:USB-C 5V → 3.3V LDO → LED。40 × 24 mm 雙層板,附 ngspice 電源模擬 | ERC 0、DRC 0、原理圖一致 |
-| ![esp32c3](boards/esp32c3/board-top.png) | **esp32c3**:ESP32-C3 最小系統板,原生 USB、AP2112K、RESET/BOOT、LED、8 pin 排針。32 × 46 mm | ERC 0、DRC 0、原理圖一致、網表逐腳比對 |
+| ![esp32c3](boards/esp32c3/board-top.png) | **esp32c3**:ESP32-C3 最小系統板,原生 USB、LP38693、RESET/BOOT、LED、8 pin 排針。32 × 46 mm | ERC 0、DRC 0、原理圖一致、網表逐腳比對 |
 | ![relay8](boards/relay8/board-top.png) | **relay8**:ESP32-C3 + ULN2803 驅動 8 路市電繼電器,**只接一條市電線**:板上 HLK-10M05 AC-DC(100–240V)、T8A 保險絲、壓敏電阻、L/N 匯流排,每路 NO · N · NC 端子,有隔離開槽和自訂市電間距規則。232 × 110 mm。**未經安規認證** | ERC 0、DRC 錯誤 0(40 個絲印被開槽/板邊裁切的警告已列出)、原理圖一致 |
 
 兩塊 ESP32 板都附有 `FIRMWARE.md`(給寫韌體的人看):腳位表、燒錄步驟、第一支程式;relay8 另外附市電接線說明。
@@ -24,7 +24,7 @@
 | 擺件自檢 | 焊盤網路對不上網表、零件出板、courtyard 重疊 | 用 courtyard 的真實多邊形判斷。ESP32 模組的 courtyard 是 T 字形,用外接矩形會把合法位置誤判成重疊 |
 | DRC + 原理圖一致性 | 間距、線寬、板邊距、原理圖與 PCB 是否一致 | — |
 | 自訂 DRC 規則 | 市電 ↔ 低壓 ≥ 3.0 mm、市電 ↔ 市電 ≥ 2.4 mm | 開槽繞過去的爬電距離 DRC 不檢查,要人審 |
-| ngspice 模擬 | 設計餘量 | 第一塊板的 LDO 壓差 1.1V,在 USB 下限 4.40V 時會掉出穩壓;插入瞬間注入約 124 µC(USB 2.0 上限 50 µC)。兩塊 ESP32 板就是依這個結果設計的 |
+| ngspice 模擬 | 設計餘量 | 第一塊板的 LDO 壓差 1.1V,在 USB 下限 4.40V 時會掉出穩壓;插入瞬間注入約 124 µC(USB 2.0 上限 50 µC)。三塊板現在都用 LP38693(輸入耐壓 12V):`esp32c3/sim` 顯示 VBUS 只有 1µF 時,熱插拔線纜振鈴會衝到 7.7–8.6V,超過 ESP32 板原本用的 AP2112K 的 6.5V 耐壓 |
 
 ## 踩過的坑
 
