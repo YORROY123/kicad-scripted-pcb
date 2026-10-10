@@ -56,13 +56,19 @@ D2 = s.add(Part("D2", "Power_Protection", "USBLC6-2P6", g(62), g(104), value="US
                 footprint="Package_TO_SOT_SMD:SOT-23-6"))
 D3 = s.add(Part("D3", "Diode", "SMAJ5.0A", g(78), g(72), value="SMAJ5.0A",
                 footprint="Diode_SMD:D_SMA"))
-C2 = s.add(Part("C2", "Device", "C", g(88), g(72), value="10uF",
+# C2/C3 由 10µF/22µF 降到 4.7µF:USB 2.0 規定插入時注入電荷 ≤50µC,
+# 舊值模擬是 124µC(見 sim/power_sim.py,v3 為 39µC)。
+C2 = s.add(Part("C2", "Device", "C", g(88), g(72), value="4.7uF",
                 footprint="Capacitor_SMD:C_0805_2012Metric"))
-U1 = s.add(Part("U1", "Regulator_Linear", "AMS1117-3.3", g(108), g(65), value="AMS1117-3.3",
-                footprint="Package_TO_SOT_SMD:SOT-223-3_TabPin2"))
+# 穩壓器由 AMS1117-3.3 換成 TI LP38693MP-3.3(SOT-223-5):
+#   - AMS1117 壓差約 1.1V,USB 端電壓偏低(4.4V)時掉出穩壓;LP38693 約 0.33V @0.5A
+#   - 不選 AP2112K:它輸入絕對最大 6.5V,熱插拔過衝模擬到 6.77V;LP38693 是 12V
+#   - 輸入/輸出各 ≥1µF 陶瓷電容即穩定
+U1 = s.add(Part("U1", "Regulator_Linear", "LP38693MP-3.3", g(108), g(65), value="LP38693MP-3.3",
+                footprint="Package_TO_SOT_SMD:SOT-223-5"))
 C1 = s.add(Part("C1", "Device", "C", g(94), g(72), value="100nF",
                 footprint="Capacitor_SMD:C_0402_1005Metric"))
-C3 = s.add(Part("C3", "Device", "C", g(128), g(72), value="22uF",
+C3 = s.add(Part("C3", "Device", "C", g(128), g(72), value="4.7uF",
                 footprint="Capacitor_SMD:C_0805_2012Metric"))
 R3 = s.add(Part("R3", "Device", "R", g(140), g(72), value="1k",
                 footprint="Resistor_SMD:R_0402_1005Metric"))
@@ -138,12 +144,17 @@ s.wire((g(72), g(98)), (g(72), g(61)))   # 自己一条上引线,不与 +5V 干�
 rail5.append(g(72))
 
 # ── U1:+5V 进、+3V3 出 ────────────────────────────────────────────────
-vi = U1.pin_xy("3")
+vi = U1.pin_xy("4")                    # LP38693:4 = IN
 s.wire(vi, (vi[0] - g(4), vi[1]))
 s.wire((vi[0] - g(4), vi[1]), (vi[0] - g(4), g(61)))
 rail5.append(vi[0] - g(4))
+# EN 接 IN:有電就輸出。規格書:EN 從 IN 一起上電(起點 <0.4V)時折返限流才有效。
+en = U1.pin_xy("1")
+s.wire(en, (vi[0] - g(4), en[1]))
+s.wire((vi[0] - g(4), en[1]), (vi[0] - g(4), vi[1]))
+s.no_connect(U1, "2")                  # 2 = NC(晶片內部未連接)
 
-vo = U1.pin_xy("2")
+vo = U1.pin_xy("3")                    # 3 = OUT
 s.wire(vo, (g(122), vo[1]))
 p33 = power("+3V3", g(122), g(61))
 s.wire((g(122), vo[1]), (g(122), g(61)))
@@ -167,8 +178,8 @@ s.rail(g(61), rail33)     # +3V3(两段在 y 相同但 x 区间不相交,互不�
 # ── GND 汇总 ───────────────────────────────────────────────────────────
 gnd_y = g(84)
 gnd_xs = [D3.pin_xy("1")[0], C2.pin_xy("2")[0], C1.pin_xy("2")[0], C3.pin_xy("2")[0],
-          U1.pin_xy("1")[0]]
-u_gnd = U1.pin_xy("1")
+          U1.pin_xy("5")[0]]
+u_gnd = U1.pin_xy("5")                 # 5 = GND
 s.wire(u_gnd, (u_gnd[0], gnd_y))
 lo, hi = min(gnd_xs), max(gnd_xs)
 s.wire((lo, gnd_y), (hi, gnd_y))
