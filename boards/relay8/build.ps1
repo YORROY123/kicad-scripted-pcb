@@ -10,12 +10,14 @@ Step 'schematic'     { python gen/board.py }
 Step 'ERC'           { & $cli sch erc --severity-all --exit-code-violations -o erc.rpt relay8.kicad_sch | Out-Null }
 Step 'netlist'       { & $cli sch export netlist --format kicadsexpr -o net.txt relay8.kicad_sch | Out-Null }
 Step 'netlist check' { & $kpy "$Lib\check_netlist.py" . }
+# Design review: datasheet rules on the netlist (TVS polarity, LED current, decoupling, straps...)
+Step 'review'        { & $kpy "$Lib\review.py" . }
 # placement, isolation slots, mains tracks, low-voltage routing keepouts, relay8.kicad_dru
 Step 'place+mains'   { & $kpy gen/pcb.py place }
 Step 'DSN'           { & $kpy "$Lib\route.py" dsn relay8 . }
 # mains nets are already connected; the keepouts stop low-voltage tracks entering the mains area
 Step 'autoroute'     {
-    Invoke-Freerouting relay8.dsn relay8.ses 60 @('--router.automatic_neckdown=false', '--router.neck_width_um=150')
+    Invoke-Freerouting relay8.dsn relay8.ses 60 @('--router.automatic_neckdown=false', '--router.neck_width_um=150') 16
 }
 # route.py deletes every track and zone (keepouts included) before importing,
 # so the finish stage re-adds the mains tracks and adds GND-pour keepouts.

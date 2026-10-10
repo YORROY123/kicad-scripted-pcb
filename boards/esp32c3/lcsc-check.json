@@ -1,5 +1,5 @@
 {
- "lcsc_json_sha256": "a83cf2fcb8808bcf",
+ "lcsc_json_sha256": "f2ca770ed0ffe402",
  "checked": "2026-10-10",
  "boards": 5,
  "parts": {
@@ -9,10 +9,16 @@
    "package": "0402",
    "brand": "Samsung Electro-Mechanics",
    "library": "base",
-   "stock": 7273713,
+   "stock": 7273071,
    "price": 0.0087,
    "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Voltage Rating": "25V",
+    "Tolerance": "±10%",
+    "Capacitance": "1uF",
+    "Temperature Coefficient": "X5R"
+   }
   },
   "10uF|Capacitor_SMD:C_0805_2012Metric": {
    "lcsc": "C15850",
@@ -20,10 +26,16 @@
    "package": "0805",
    "brand": "Samsung Electro-Mechanics",
    "library": "base",
-   "stock": 4324186,
+   "stock": 4326986,
    "price": 0.0688,
    "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Voltage Rating": "25V",
+    "Tolerance": "±10%",
+    "Capacitance": "10uF",
+    "Temperature Coefficient": "X5R"
+   }
   },
   "100nF|Capacitor_SMD:C_0402_1005Metric": {
    "lcsc": "C1525",
@@ -31,10 +43,16 @@
    "package": "0402",
    "brand": "Samsung Electro-Mechanics",
    "library": "base",
-   "stock": 24127635,
+   "stock": 24133642,
    "price": 0.0045,
    "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Voltage Rating": "16V",
+    "Tolerance": "±10%",
+    "Capacitance": "100nF",
+    "Temperature Coefficient": "X7R"
+   }
   },
   "10nF|Capacitor_SMD:C_0402_1005Metric": {
    "lcsc": "C15195",
@@ -42,10 +60,16 @@
    "package": "0402",
    "brand": "Samsung Electro-Mechanics",
    "library": "base",
-   "stock": 3598152,
+   "stock": 3595964,
    "price": 0.005,
    "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Voltage Rating": "50V",
+    "Tolerance": "±10%",
+    "Capacitance": "10nF",
+    "Temperature Coefficient": "X7R"
+   }
   },
   "USBLC6-2SC6|Package_TO_SOT_SMD:SOT-23-6": {
    "lcsc": "C7519",
@@ -53,21 +77,23 @@
    "package": "SOT-23-6L",
    "brand": "STMicroelectronics",
    "library": "expand",
-   "stock": 39786,
+   "stock": 39735,
    "price": 0.177,
    "manual": [],
-   "errors": []
-  },
-  "BLUE|LED_SMD:LED_0805_2012Metric": {
-   "lcsc": "C84259",
-   "model": "NCD0805B2",
-   "package": "0805",
-   "brand": "Foshan NationStar Optoelectronics",
-   "library": "expand",
-   "stock": 383048,
-   "price": 0.0268,
-   "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Operating Temperature": "-40℃~+125℃@(Tj)",
+    "Type": "ESD",
+    "Junction Capacitance": "3.5pF",
+    "Number of Channels": "2",
+    "level of protection": "IEC 61000-4-2",
+    "Clamping Voltage": "17V",
+    "Polarity": "Unidirectional",
+    "Peak Pulse Current (Ipp)": "5A",
+    "Voltage - Breakdown": "6V",
+    "Reverse Stand-Off Voltage (Vrwm)": "5.25V",
+    "Reverse Leakage Current (Ir)": "150nA"
+   }
   },
   "GREEN|LED_SMD:LED_0805_2012Metric": {
    "lcsc": "C2297",
@@ -75,10 +101,24 @@
    "package": "0805",
    "brand": "Hubei KENTO Elec",
    "library": "base",
-   "stock": 2908205,
+   "stock": 2908418,
    "price": 0.0163,
    "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Wavelength - Dominant": "513nm~528nm",
+    "Operating Temperature": "-40℃~+85℃",
+    "Test Current": "5mA",
+    "Viewing Angle": "120°",
+    "Lamp Holder Type": "2mm x 1.25mm square LED",
+    "Luminous Intensity": "430mcd",
+    "Power(Watts)": "100mW",
+    "Diode Configuration": "Discrete Diode",
+    "Illumination Color": "Emerald Green",
+    "Lens Color": "Water Clear",
+    "Peak Wavelength": "525nm",
+    "Voltage - Forward(Vf)": "2.6V~3.1V"
+   }
   },
   "USB-C|Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12": {
    "lcsc": "C165948",
@@ -86,12 +126,24 @@
    "package": "SMD",
    "brand": "Korean Hroparts Elec",
    "library": "expand",
-   "stock": 409148,
+   "stock": 409394,
    "price": 0.186,
    "manual": [
     "封裝 JLC 寫「SMD」,KiCad 用 USB_C_Receptacle_HRO_TYPE-C-31-M-12,對不對要人看規格書"
    ],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Operating Temperature": "-30℃~+80℃",
+    "Number of Ports": "1",
+    "Length": "7.35mm",
+    "Current Rating-Power": "5A",
+    "Voltage Rating": "20V",
+    "Connector Type": "Type-C",
+    "Number of Contacts": "16P",
+    "Gender": "Female",
+    "Connect-Disconnect Life": "10,000 cycles",
+    "Mounting Type": "Surface Mount, Right Angle"
+   }
   },
   "IO|Connector_PinHeader_2.54mm:PinHeader_1x08_P2.54mm_Vertical": {
    "lcsc": "C492407",
@@ -102,7 +154,24 @@
    "stock": 335941,
    "price": 0.0479,
    "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Operating Temperature": "-40℃~+105℃",
+    "Number of Rows": "1",
+    "Voltage Rating (Max)": "250V",
+    "Insulation Height": "2.5mm",
+    "Length of End Connection Pin": "3mm",
+    "Color": "Black",
+    "Current Rating": "3A",
+    "Mounting Type": "Through Hole",
+    "Contact Plating": "Gold",
+    "Number of Pins": "8P",
+    "Pitch": "2.54mm",
+    "Contact Material": "Brass",
+    "Pin Structure": "1x8P",
+    "Length of Mating Pin": "6.1mm",
+    "Circluar Pins/Square Pins": "Square pin"
+   }
   },
   "AO3401A|Package_TO_SOT_SMD:SOT-23": {
    "lcsc": "C15127",
@@ -110,10 +179,21 @@
    "package": "SOT-23",
    "brand": "Alpha & Omega Semicon",
    "library": "base",
-   "stock": 681668,
+   "stock": 682093,
    "price": 0.1018,
    "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Input Capacitance(Ciss)": "645pF",
+    "Gate Threshold Voltage (Vgs(th))": "900mV",
+    "Number": "1 P-Channel",
+    "Gate Charge(Qg)": "14nC@10V",
+    "Reverse Transfer Capacitance (Crss@Vds)": "55pF",
+    "Current - Continuous Drain(Id)": "4A",
+    "Drain to Source Voltage": "30V",
+    "Output Capacitance(Coss)": "80pF",
+    "RDS(on)": "47mΩ@10V、60mΩ@4.5V、85mΩ@2.5V"
+   }
   },
   "5.1k|Resistor_SMD:R_0402_1005Metric": {
    "lcsc": "C25905",
@@ -121,10 +201,19 @@
    "package": "0402",
    "brand": "UNI-ROYAL(Uniroyal Elec)",
    "library": "base",
-   "stock": 5623714,
+   "stock": 5624734,
    "price": 0.0024,
    "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Resistance": "5.1kΩ",
+    "Operating Temperature": "-55℃~+155℃",
+    "Power(Watts)": "62.5mW",
+    "Type": "Thick Film Resistor",
+    "Voltage-Supply(Max)": "50V",
+    "Tolerance": "±1%",
+    "Temperature Coefficient": "±100ppm/℃"
+   }
   },
   "10k|Resistor_SMD:R_0402_1005Metric": {
    "lcsc": "C25744",
@@ -132,21 +221,19 @@
    "package": "0402",
    "brand": "UNI-ROYAL(Uniroyal Elec)",
    "library": "base",
-   "stock": 19803989,
+   "stock": 19801508,
    "price": 0.0034,
    "manual": [],
-   "errors": []
-  },
-  "1k|Resistor_SMD:R_0402_1005Metric": {
-   "lcsc": "C11702",
-   "model": "0402WGF1001TCE",
-   "package": "0402",
-   "brand": "UNI-ROYAL(Uniroyal Elec)",
-   "library": "base",
-   "stock": 8316707,
-   "price": 0.0035,
-   "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Resistance": "10kΩ",
+    "Operating Temperature": "-55℃~+155℃",
+    "Power(Watts)": "62.5mW",
+    "Type": "Thick Film Resistor",
+    "Voltage-Supply(Max)": "50V",
+    "Tolerance": "±1%",
+    "Temperature Coefficient": "±100ppm/℃"
+   }
   },
   "100k|Resistor_SMD:R_0402_1005Metric": {
    "lcsc": "C25741",
@@ -154,10 +241,19 @@
    "package": "0402",
    "brand": "UNI-ROYAL(Uniroyal Elec)",
    "library": "base",
-   "stock": 8094557,
+   "stock": 8094581,
    "price": 0.0024,
    "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Resistance": "100kΩ",
+    "Operating Temperature": "-55℃~+155℃",
+    "Power(Watts)": "62.5mW",
+    "Type": "Thick Film Resistor",
+    "Voltage-Supply(Max)": "50V",
+    "Tolerance": "±1%",
+    "Temperature Coefficient": "±100ppm/℃"
+   }
   },
   "RESET|Button_Switch_SMD:SW_Push_1P1T_NO_CK_KMR2": {
    "lcsc": "C72443",
@@ -170,7 +266,20 @@
    "manual": [
     "封裝 JLC 寫「SMD,4.6x2.8mm」,KiCad 用 SW_Push_1P1T_NO_CK_KMR2,對不對要人看規格書"
    ],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Operating Temperature": "-40℃~+85℃",
+    "Operating Force": "2N",
+    "Contact Current": "50mA",
+    "Length": "4.6mm",
+    "Termination Style": "Gull Wing",
+    "Voltage Rating": "32V",
+    "Actuator Style": "Round Button",
+    "Switch Height": "1.9mm",
+    "Circuit": "SPST",
+    "Mounting Type": "Surface Mount,Vertical",
+    "Width": "2.8mm"
+   }
   },
   "BOOT|Button_Switch_SMD:SW_Push_1P1T_NO_CK_KMR2": {
    "lcsc": "C72443",
@@ -183,7 +292,20 @@
    "manual": [
     "封裝 JLC 寫「SMD,4.6x2.8mm」,KiCad 用 SW_Push_1P1T_NO_CK_KMR2,對不對要人看規格書"
    ],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Operating Temperature": "-40℃~+85℃",
+    "Operating Force": "2N",
+    "Contact Current": "50mA",
+    "Length": "4.6mm",
+    "Termination Style": "Gull Wing",
+    "Voltage Rating": "32V",
+    "Actuator Style": "Round Button",
+    "Switch Height": "1.9mm",
+    "Circuit": "SPST",
+    "Mounting Type": "Surface Mount,Vertical",
+    "Width": "2.8mm"
+   }
   },
   "ESP32-C3-WROOM-02-N4|RF_Module:ESP32-C3-WROOM-02": {
    "lcsc": "C2934560",
@@ -191,12 +313,26 @@
    "package": "SMD,20x18mm",
    "brand": "Espressif Systems",
    "library": "expand",
-   "stock": 10424,
+   "stock": 10422,
    "price": 3.2949,
    "manual": [
     "封裝 JLC 寫「SMD,20x18mm」,KiCad 用 ESP32-C3-WROOM-02,對不對要人看規格書"
    ],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Antenna Type": "On-board PCB Antenna",
+    "Operating Temperature": "-40℃~+85℃",
+    "Sensitivity": "-105dBm",
+    "Output Power": "20.5dBm",
+    "Voltage - Supply": "3V~3.6V",
+    "Frequency": "2.4GHz",
+    "Features": "Integrated Bluetooth function、Support USB interface",
+    "Utilized IC / Part": "ESP32-C3 Chip",
+    "Interface Type": "UART、SPI、I2C、I2S、JTAG、USB",
+    "Receive  Current": "82mA",
+    "Wireless Standard": "Bluetooth5.0",
+    "Send  Current": "345mA"
+   }
   },
   "LP38693MP-3.3|Package_TO_SOT_SMD:SOT-223-5": {
    "lcsc": "C130904",
@@ -207,7 +343,83 @@
    "stock": 296,
    "price": 1.702,
    "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Power Supply Rejection Ratio (PSRR)": "55dB@(120Hz)",
+    "Operating Temperature": "-40℃~+125℃@(Tj)",
+    "standby current": "55uA",
+    "Voltage - Supply": "10V",
+    "Output Type": "Fixed",
+    "Output Current": "500mA",
+    "Output Configuration": "Positive",
+    "Features": "Over Current Protection、Thermal shutdown、Enable control、Input under-voltage protection",
+    "Voltage Dropout": "550mV@(0.5A)",
+    "Output Voltage": "3.3V",
+    "Number of Outputs": "1"
+   }
+  },
+  "KT-0805Y|LED_SMD:LED_0805_2012Metric": {
+   "lcsc": "C2296",
+   "model": "KT-0805Y",
+   "package": "0805",
+   "brand": "Hubei KENTO Elec",
+   "library": "base",
+   "stock": 322832,
+   "price": 0.0153,
+   "manual": [],
+   "errors": [],
+   "attrs": {
+    "Operating Temperature": "-40℃~+85℃",
+    "Wavelength - Dominant": "584nm~594nm",
+    "Viewing Angle": "120°",
+    "Luminous Intensity": "175mcd",
+    "Power(Watts)": "40mW",
+    "Diode Configuration": "Discrete Diode",
+    "Illumination Color": "Yellow",
+    "Lens Color": "Water Clear",
+    "Peak Wavelength": "596nm",
+    "Voltage - Forward(Vf)": "1.8V~2.4V"
+   }
+  },
+  "470|Resistor_SMD:R_0402_1005Metric": {
+   "lcsc": "C25117",
+   "model": "0402WGF4700TCE",
+   "package": "0402",
+   "brand": "UNI-ROYAL(Uniroyal Elec)",
+   "library": "base",
+   "stock": 770183,
+   "price": 0.0027,
+   "manual": [],
+   "errors": [],
+   "attrs": {
+    "Resistance": "470Ω",
+    "Operating Temperature": "-55℃~+155℃",
+    "Power(Watts)": "62.5mW",
+    "Type": "Thick Film Resistor",
+    "Voltage-Supply(Max)": "50V",
+    "Tolerance": "±1%",
+    "Temperature Coefficient": "±100ppm/℃"
+   }
+  },
+  "220|Resistor_SMD:R_0402_1005Metric": {
+   "lcsc": "C25091",
+   "model": "0402WGF2200TCE",
+   "package": "0402",
+   "brand": "UNI-ROYAL(Uniroyal Elec)",
+   "library": "base",
+   "stock": 1319170,
+   "price": 0.0035,
+   "manual": [],
+   "errors": [],
+   "attrs": {
+    "Resistance": "220Ω",
+    "Operating Temperature": "-55℃~+155℃",
+    "Power(Watts)": "62.5mW",
+    "Type": "Thick Film Resistor",
+    "Voltage-Supply(Max)": "50V",
+    "Tolerance": "±1%",
+    "Temperature Coefficient": "±100ppm/℃"
+   }
   }
  }
 }

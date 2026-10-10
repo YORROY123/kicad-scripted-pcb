@@ -44,9 +44,7 @@ def flag(x: float, y: float, rot: float = 0.0) -> Part:
 J1 = s.add(Part("J1", "Connector", "USB_C_Receptacle_USB2.0_16P", g(30), g(85),
                 value="USB-C", footprint="Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12"))
 
-# 真板子用的是 SS34;KiCad 内建库没有 SS34,用同系列的 SS32 符号代替
-# (脚位与封装相同,差别在反向耐压 20V vs 30V)。Value 仍写 SS34 以对上 BOM。
-D1 = s.add(Part("D1", "Diode", "SS32", g(62), g(65), value="SS34", rotation=180,
+D1 = s.add(Part("D1", "Diode", "SS34", g(62), g(65), value="SS34", rotation=180,
                 footprint="Diode_SMD:D_SMA"))
 R1 = s.add(Part("R1", "Device", "R", g(44), g(95), value="5.1k",
                 footprint="Resistor_SMD:R_0402_1005Metric"))
@@ -95,7 +93,10 @@ flag(g(74), g(61))
 rail5 = [g(70), g(74)]        # +5V 干线的分接点,最后统一画
 
 # ── +5V 上的 TVS 与输入电容 ────────────────────────────────────────────
-for part, pin_hi, pin_lo in ((D3, "2", "1"), (C2, "1", "2")):
+# SMAJ5.0A 符號的 1 號腳名稱寫 A1,其實是陰極(橫桿那側;D_SMA 封裝 1 號焊盤是色環端)。
+# 第一版把 2 號腳接 +5V → 陽極在電源、陰極在地,TVS 順偏跨在 +5V 上 = 短路。
+# ERC / DRC / 網表比對都抓不到,是 lib/review.py 的 diode-short 規則抓到的。
+for part, pin_hi, pin_lo in ((D3, "1", "2"), (C2, "1", "2")):
     hi = part.pin_xy(pin_hi)
     s.wire(hi, (hi[0], g(61)))
     rail5.append(hi[0])
@@ -177,7 +178,7 @@ s.rail(g(61), rail33)     # +3V3(两段在 y 相同但 x 区间不相交,互不�
 
 # ── GND 汇总 ───────────────────────────────────────────────────────────
 gnd_y = g(84)
-gnd_xs = [D3.pin_xy("1")[0], C2.pin_xy("2")[0], C1.pin_xy("2")[0], C3.pin_xy("2")[0],
+gnd_xs = [D3.pin_xy("2")[0], C2.pin_xy("2")[0], C1.pin_xy("2")[0], C3.pin_xy("2")[0],
           U1.pin_xy("5")[0]]
 u_gnd = U1.pin_xy("5")                 # 5 = GND
 s.wire(u_gnd, (u_gnd[0], gnd_y))

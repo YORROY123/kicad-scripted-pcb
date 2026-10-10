@@ -32,9 +32,18 @@ function Step($name, [scriptblock]$body) {
 
 # freerouting autoroute. The DSN carries no copper-to-edge rule, so pass it explicitly or the
 # router hugs the board edge. Extra arguments are appended (e.g. neck-down settings).
-function Invoke-Freerouting($dsn, $ses, $passes, [string[]]$extra = @()) {
-    & $java -jar $fr -de $dsn -do $ses "--router.autorouter.max_passes=$passes" `
-        --gui.enabled=false --router.copper_to_edge_clearance_um=500 @extra *> freerouting.log
-    Select-String freerouting.log -Pattern 'Auto-routing stage completed' |
-        ForEach-Object { $_.Line -replace '^.*completed:', '  ' }
+# freerouting is multi-threaded and not deterministic: the same DSN sometimes leaves a couple
+# of connections unrouted. Retry (up to 3 runs) while more than $allowUnrouted remain; relay8
+# leaves its mains nets to the script on purpose.
+function Invoke-Freerouting($dsn, $ses, $passes, [string[]]$extra = @(), [int]$allowUnrouted = 0) {
+    for ($try = 1; $try -le 3; $try++) {
+        & $java -jar $fr -de $dsn -do $ses "--router.autorouter.max_passes=$passes" `
+            --gui.enabled=false --router.copper_to_edge_clearance_um=500 @extra *> freerouting.log
+        $line = Select-String freerouting.log -Pattern 'Auto-routing stage completed' |
+            Select-Object -Last 1 -ExpandProperty Line
+        Write-Host ('  ' + ($line -replace '^.*completed:', ''))
+        if ($line -match '\((\d+) unrouted' -and [int]$Matches[1] -le $allowUnrouted) { return }
+        Write-Host "  run $try left too many unrouted connections" -ForegroundColor Yellow
+    }
+    throw 'freerouting left unrouted connections in 3 runs'
 }

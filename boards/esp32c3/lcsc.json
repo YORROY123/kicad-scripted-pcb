@@ -19,10 +19,6 @@
   "lcsc": "C7519",
   "model": "USBLC6-2SC6"
  },
- "BLUE|LED_SMD:LED_0805_2012Metric": {
-  "lcsc": "C84259",
-  "model": "NCD0805B2"
- },
  "GREEN|LED_SMD:LED_0805_2012Metric": {
   "lcsc": "C2297",
   "model": "KT-0805G"
@@ -49,10 +45,6 @@
   "lcsc": "C25744",
   "model": "0402WGF1002TCE"
  },
- "1k|Resistor_SMD:R_0402_1005Metric": {
-  "lcsc": "C11702",
-  "model": "0402WGF1001TCE"
- },
  "100k|Resistor_SMD:R_0402_1005Metric": {
   "lcsc": "C25741",
   "model": "0402WGF1003TCE"
@@ -74,5 +66,17 @@
  "LP38693MP-3.3|Package_TO_SOT_SMD:SOT-223-5": {
   "lcsc": "C130904",
   "model": "LP38693MP-3.3"
+ },
+ "KT-0805Y|LED_SMD:LED_0805_2012Metric": {
+  "lcsc": "C2296",
+  "model": "KT-0805Y"
+ },
+ "470|Resistor_SMD:R_0402_1005Metric": {
+  "lcsc": "C25117",
+  "model": "0402WGF4700TCE"
+ },
+ "220|Resistor_SMD:R_0402_1005Metric": {
+  "lcsc": "C25091",
+  "model": "0402WGF2200TCE"
  }
 }

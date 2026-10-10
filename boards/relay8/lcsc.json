@@ -142,5 +142,9 @@
  "ULN2803A|Package_SO:SOIC-18W_7.5x11.6mm_P1.27mm": {
   "lcsc": "C9683",
   "model": "ULN2803ADWR"
+ },
+ "220|Resistor_SMD:R_0402_1005Metric": {
+  "lcsc": "C25091",
+  "model": "0402WGF2200TCE"
  }
 }

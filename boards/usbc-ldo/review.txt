@@ -1,0 +1,7 @@
+INFO  usb-esd         D2    VBUS 腳接 +5V,不是 USB 接頭的 VBUS ['Net-(D1-A)']  [豁免:+5V 是 VBUS 經 SS34 之後的網,USBLC6 的 VBUS 參考腳只低約 0.4V,箝位效果相同]
+OK    decoupling      U1    IN(+5V,3.90–4.95V)對地 4.80µF:C1 100nF, C2 4.7uF
+OK    led-current     LED1  KT-0805Y 經 R3 1k:電流 0.83 / 1.20 / 1.57 mA(最壞 / 中間 / 最大;電源 3.23–3.37V、Vf 1.8–2.4V、低側 0.00V)
+OK    usb-c-sink      J1    CC1 → R1 5.1k 對地
+OK    usb-c-sink      J1    CC2 → R2 5.1k 對地
+設計審查:ERROR 0、WARN 0、INFO 1、OK 4
+推算出的網電壓:+3V3 3.23–3.37V、+5V 3.90–4.95V、GND 0.00V、Net-(D1-A) 4.40–5.25V

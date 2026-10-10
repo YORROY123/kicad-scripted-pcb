@@ -6,6 +6,8 @@ Set-Location $PSScriptRoot
 Step 'schematic' { python gen/board.py }
 Step 'ERC'       { & $cli sch erc --severity-all --exit-code-violations -o erc.rpt usbc-ldo.kicad_sch | Out-Null }
 Step 'netlist'   { & $cli sch export netlist --format kicadsexpr -o net.txt usbc-ldo.kicad_sch | Out-Null }
+# Design review: datasheet rules on the netlist (TVS polarity, LED current, decoupling, straps...)
+Step 'review'        { & $kpy "$Lib\review.py" . }
 Step 'PCB'       { & $kpy gen/pcb.py }
 Step 'DSN'       { & $kpy "$Lib\route.py" dsn usbc-ldo . }
 Step 'autoroute' { Invoke-Freerouting usbc-ldo.dsn usbc-ldo.ses 30 }

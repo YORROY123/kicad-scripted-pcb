@@ -1,0 +1,3 @@
+{
+ "usb-esd|D2": "+5V 是 VBUS 經 SS34 之後的網,USBLC6 的 VBUS 參考腳只低約 0.4V,箝位效果相同"
+}
