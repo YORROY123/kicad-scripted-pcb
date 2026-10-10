@@ -13,6 +13,12 @@ from pathlib import Path
 
 import pcbnew
 
+# 新物件的 UUID 預設是隨機的,而 KiCad 的 Specctra 匯出器照 UUID 排序元件、image 與網路腳位。
+# 同一份擺位每次會生出順序不同的 DSN,freerouting 對順序敏感(對同一份 DSN 則每次結果相同)
+# → 佈線成敗變成擲骰子。固定種子讓 UUID、DSN、佈線結果與 .kicad_pcb 都可重現。
+# 所有寫板子的腳本(各板 gen/pcb.py、route.py)都 import 本模組,種子在這裡設一次就涵蓋。
+pcbnew.KIID.SeedGenerator(20261010)
+
 FP_DIR = Path(pcbnew.__file__).resolve().parents[3] / "share" / "kicad" / "footprints"
 if not FP_DIR.is_dir():  # pcbnew.py 在 bin/Lib/site-packages 或 bin 下,两种都试
     FP_DIR = Path(sys.executable).resolve().parents[1] / "share" / "kicad" / "footprints"
