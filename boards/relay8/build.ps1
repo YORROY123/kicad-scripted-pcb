@@ -31,4 +31,6 @@ Select-String drc-warnings.rpt -Pattern '^\[' | ForEach-Object { ($_.Line -split
 Step 'render'        {
     & $cli pcb render --side top --width 1800 --height 1200 --quality basic -o board-top.png relay8.kicad_pcb | Out-Null
 }
+# Gerber + drill zip, JLCPCB BOM / CPL; checks drill count and refdes against the board
+Step 'fab'           { & $kpy "$Lib\fab.py" relay8 . }
 Write-Host '== done' -ForegroundColor Green

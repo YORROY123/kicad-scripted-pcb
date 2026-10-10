@@ -112,7 +112,7 @@ add("J1", "Connector", "USB_C_Receptacle_USB2.0_16P", 30, 60, "USB-C",
 add("R1", "Device", "R", 60, 50, "5.1k", R0402, {"1": "CC1", "2": "GND"})
 add("R2", "Device", "R", 68, 50, "5.1k", R0402, {"1": "CC2", "2": "GND"})
 # ESD:USBLC6 的 1/6、3/4 是同一条线的两端(穿过式),VBUS 脚做钳位参考
-add("D1", "Power_Protection", "USBLC6-2P6", 64, 80, "USBLC6-2P6",
+add("D1", "Power_Protection", "USBLC6-2SC6", 64, 80, "USBLC6-2SC6",
     "Package_TO_SOT_SMD:SOT-23-6", {
         "1": "USB_DP", "6": "USB_DP", "3": "USB_DN", "4": "USB_DN",
         "5": "VBUS", "2": "GND",

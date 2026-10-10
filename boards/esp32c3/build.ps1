@@ -23,4 +23,6 @@ Select-String drc.rpt -Pattern '^\*\* Found' | ForEach-Object { '  ' + $_.Line }
 Step 'render'        {
     & $cli pcb render --side top --width 1400 --height 1600 --quality basic -o board-top.png esp32c3.kicad_pcb | Out-Null
 }
+# Gerber + drill zip, JLCPCB BOM / CPL; checks drill count and refdes against the board
+Step 'fab'           { & $kpy "$Lib\fab.py" esp32c3 . }
 Write-Host '== done' -ForegroundColor Green

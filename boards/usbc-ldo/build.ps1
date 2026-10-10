@@ -17,4 +17,6 @@ Select-String drc.rpt -Pattern '^\*\* Found' | ForEach-Object { '  ' + $_.Line }
 Step 'render'    {
     & $cli pcb render --side top --width 1600 --height 1000 --quality basic -o board-top.png usbc-ldo.kicad_pcb | Out-Null
 }
+# Gerber + drill zip, JLCPCB BOM / CPL; checks drill count and refdes against the board
+Step 'fab'           { & $kpy "$Lib\fab.py" usbc-ldo . }
 Write-Host '== done' -ForegroundColor Green

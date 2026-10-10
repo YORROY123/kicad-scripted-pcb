@@ -52,7 +52,7 @@ R1 = s.add(Part("R1", "Device", "R", g(44), g(95), value="5.1k",
                 footprint="Resistor_SMD:R_0402_1005Metric"))
 R2 = s.add(Part("R2", "Device", "R", g(48), g(95), value="5.1k",
                 footprint="Resistor_SMD:R_0402_1005Metric"))
-D2 = s.add(Part("D2", "Power_Protection", "USBLC6-2P6", g(62), g(104), value="USBLC6-2P6",
+D2 = s.add(Part("D2", "Power_Protection", "USBLC6-2SC6", g(62), g(104), value="USBLC6-2SC6",
                 footprint="Package_TO_SOT_SMD:SOT-23-6"))
 D3 = s.add(Part("D3", "Diode", "SMAJ5.0A", g(78), g(72), value="SMAJ5.0A",
                 footprint="Diode_SMD:D_SMA"))
