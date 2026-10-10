@@ -1,0 +1,307 @@
+{
+ "lcsc_json_sha256": "4a271143bda67182",
+ "checked": "2026-10-10",
+ "boards": 5,
+ "parts": {
+  "1uF|Capacitor_SMD:C_0402_1005Metric": {
+   "lcsc": "C52923",
+   "model": "CL05A105KA5NQNC",
+   "package": "0402",
+   "brand": "Samsung Electro-Mechanics",
+   "library": "base",
+   "stock": 7273713,
+   "price": 0.0087,
+   "manual": [],
+   "errors": []
+  },
+  "10uF|Capacitor_SMD:C_0805_2012Metric": {
+   "lcsc": "C15850",
+   "model": "CL21A106KAYNNNE",
+   "package": "0805",
+   "brand": "Samsung Electro-Mechanics",
+   "library": "base",
+   "stock": 4324186,
+   "price": 0.0688,
+   "manual": [],
+   "errors": []
+  },
+  "100nF|Capacitor_SMD:C_0402_1005Metric": {
+   "lcsc": "C1525",
+   "model": "CL05B104KO5NNNC",
+   "package": "0402",
+   "brand": "Samsung Electro-Mechanics",
+   "library": "base",
+   "stock": 24127635,
+   "price": 0.0045,
+   "manual": [],
+   "errors": []
+  },
+  "100uF|Capacitor_SMD:CP_Elec_6.3x7.7": {
+   "lcsc": "C72476",
+   "model": "RVT1C101M0607",
+   "package": "SMD,D6.3xL7.7mm",
+   "brand": "ROQANG",
+   "library": "expand",
+   "stock": 3682,
+   "price": 0.0382,
+   "manual": [],
+   "errors": []
+  },
+  "USBLC6-2SC6|Package_TO_SOT_SMD:SOT-23-6": {
+   "lcsc": "C7519",
+   "model": "USBLC6-2SC6",
+   "package": "SOT-23-6L",
+   "brand": "STMicroelectronics",
+   "library": "expand",
+   "stock": 39786,
+   "price": 0.177,
+   "manual": [],
+   "errors": []
+  },
+  "GREEN|LED_SMD:LED_0805_2012Metric": {
+   "lcsc": "C2297",
+   "model": "KT-0805G",
+   "package": "0805",
+   "brand": "Hubei KENTO Elec",
+   "library": "base",
+   "stock": 2908205,
+   "price": 0.0163,
+   "manual": [],
+   "errors": []
+  },
+  "SS34|Diode_SMD:D_SMA": {
+   "lcsc": "C8678",
+   "model": "SS34",
+   "package": "SMA(DO-214AC)",
+   "brand": "MDD(Microdiode Semiconductor)",
+   "library": "base",
+   "stock": 4166817,
+   "price": 0.0349,
+   "manual": [],
+   "errors": []
+  },
+  "RED|LED_SMD:LED_0805_2012Metric": {
+   "lcsc": "C84256",
+   "model": "NCD0805R1",
+   "package": "0805",
+   "brand": "Foshan NationStar Optoelectronics",
+   "library": "base",
+   "stock": 4376440,
+   "price": 0.0134,
+   "manual": [],
+   "errors": []
+  },
+  "T8A 250V|Fuse:Fuseholder_Clip-5x20mm_Keystone_3517_Inline_P23.11x6.76mm_D1.70mm_Horizontal": {
+   "assemble": false,
+   "reason": "Keystone 3517 保險絲夾 LCSC 庫存 0",
+   "buy": "Keystone 3517 ×2 + 5×20mm T8A 250V 保險絲"
+  },
+  "T1A 250V|Fuse:Fuseholder_TR5_Littelfuse_No560_No460": {
+   "assemble": false,
+   "reason": "Littelfuse 560 座 LCSC 查無",
+   "buy": "Littelfuse 560 TR5 座 + TR5 T1A 250V 保險絲"
+  },
+  "USB-C|Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12": {
+   "lcsc": "C165948",
+   "model": "TYPE-C-31-M-12",
+   "package": "SMD",
+   "brand": "Korean Hroparts Elec",
+   "library": "expand",
+   "stock": 409148,
+   "price": 0.186,
+   "manual": [
+    "封裝 JLC 寫「SMD」,KiCad 用 USB_C_Receptacle_HRO_TYPE-C-31-M-12,對不對要人看規格書"
+   ],
+   "errors": []
+  },
+  "UART|Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical": {
+   "lcsc": "C492403",
+   "model": "PZ254V-11-04P",
+   "package": "Plugin,P=2.54mm",
+   "brand": "XFCN",
+   "library": "expand",
+   "stock": 58881,
+   "price": 0.0282,
+   "manual": [],
+   "errors": []
+  },
+  "CH1|TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13703HBWC_1x03_P7.50mm_Horizontal": {
+   "assemble": false,
+   "reason": "LCSC 查無 MetzConnect RT13703HBWC",
+   "buy": "MetzConnect RT13703HBWC(7.5mm 3P)"
+  },
+  "CH2|TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13703HBWC_1x03_P7.50mm_Horizontal": {
+   "assemble": false,
+   "reason": "LCSC 查無 MetzConnect RT13703HBWC",
+   "buy": "MetzConnect RT13703HBWC(7.5mm 3P)"
+  },
+  "CH3|TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13703HBWC_1x03_P7.50mm_Horizontal": {
+   "assemble": false,
+   "reason": "LCSC 查無 MetzConnect RT13703HBWC",
+   "buy": "MetzConnect RT13703HBWC(7.5mm 3P)"
+  },
+  "CH4|TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13703HBWC_1x03_P7.50mm_Horizontal": {
+   "assemble": false,
+   "reason": "LCSC 查無 MetzConnect RT13703HBWC",
+   "buy": "MetzConnect RT13703HBWC(7.5mm 3P)"
+  },
+  "CH5|TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13703HBWC_1x03_P7.50mm_Horizontal": {
+   "assemble": false,
+   "reason": "LCSC 查無 MetzConnect RT13703HBWC",
+   "buy": "MetzConnect RT13703HBWC(7.5mm 3P)"
+  },
+  "CH6|TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13703HBWC_1x03_P7.50mm_Horizontal": {
+   "assemble": false,
+   "reason": "LCSC 查無 MetzConnect RT13703HBWC",
+   "buy": "MetzConnect RT13703HBWC(7.5mm 3P)"
+  },
+  "CH7|TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13703HBWC_1x03_P7.50mm_Horizontal": {
+   "assemble": false,
+   "reason": "LCSC 查無 MetzConnect RT13703HBWC",
+   "buy": "MetzConnect RT13703HBWC(7.5mm 3P)"
+  },
+  "CH8|TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13703HBWC_1x03_P7.50mm_Horizontal": {
+   "assemble": false,
+   "reason": "LCSC 查無 MetzConnect RT13703HBWC",
+   "buy": "MetzConnect RT13703HBWC(7.5mm 3P)"
+  },
+  "MAINS IN|TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13702HBWC_1x02_P7.50mm_Horizontal": {
+   "assemble": false,
+   "reason": "LCSC 查無 MetzConnect RT13702HBWC",
+   "buy": "MetzConnect RT13702HBWC(7.5mm 2P)"
+  },
+  "SRD-05VDC-SL-C|Relay_THT:Relay_SPDT_SANYOU_SRD_Series_Form_C": {
+   "lcsc": "C35449",
+   "model": "SRD-05VDC-SL-C",
+   "package": "插件,19.2x15.6mm",
+   "brand": "Ningbo Songle Relay",
+   "library": "expand",
+   "stock": 107338,
+   "price": 0.4414,
+   "manual": [
+    "封裝 JLC 寫「插件,19.2x15.6mm」,KiCad 用 Relay_SPDT_SANYOU_SRD_Series_Form_C,對不對要人看規格書"
+   ],
+   "errors": []
+  },
+  "HLK-10M05|Converter_ACDC:Converter_ACDC_Hi-Link_HLK-10Mxx": {
+   "lcsc": "C403745",
+   "model": "HLK-10M05",
+   "package": "DIP,46.9x27.8mm",
+   "brand": "HI-LINK",
+   "library": "expand",
+   "stock": 3124,
+   "price": 3.5587,
+   "manual": [
+    "封裝 JLC 寫「DIP,46.9x27.8mm」,KiCad 用 Converter_ACDC_Hi-Link_HLK-10Mxx,對不對要人看規格書"
+   ],
+   "errors": []
+  },
+  "5.1k|Resistor_SMD:R_0402_1005Metric": {
+   "lcsc": "C25905",
+   "model": "0402WGF5101TCE",
+   "package": "0402",
+   "brand": "UNI-ROYAL(Uniroyal Elec)",
+   "library": "base",
+   "stock": 5623714,
+   "price": 0.0024,
+   "manual": [],
+   "errors": []
+  },
+  "10k|Resistor_SMD:R_0402_1005Metric": {
+   "lcsc": "C25744",
+   "model": "0402WGF1002TCE",
+   "package": "0402",
+   "brand": "UNI-ROYAL(Uniroyal Elec)",
+   "library": "base",
+   "stock": 19803989,
+   "price": 0.0034,
+   "manual": [],
+   "errors": []
+  },
+  "1k|Resistor_SMD:R_0402_1005Metric": {
+   "lcsc": "C11702",
+   "model": "0402WGF1001TCE",
+   "package": "0402",
+   "brand": "UNI-ROYAL(Uniroyal Elec)",
+   "library": "base",
+   "stock": 8316707,
+   "price": 0.0035,
+   "manual": [],
+   "errors": []
+  },
+  "14D431K|Varistor:RV_Disc_D15.5mm_W4.4mm_P7.5mm": {
+   "lcsc": "C137830",
+   "model": "14D431K",
+   "package": "Plugin,P=7.5mm",
+   "brand": "Hongzhi Elec",
+   "library": "expand",
+   "stock": 2478,
+   "price": 0.1419,
+   "manual": [
+    "封裝 JLC 寫「Plugin,P=7.5mm」,KiCad 用 RV_Disc_D15.5mm_W4.4mm_P7.5mm,對不對要人看規格書"
+   ],
+   "errors": []
+  },
+  "RESET|Button_Switch_SMD:SW_Push_1P1T_NO_CK_KMR2": {
+   "lcsc": "C72443",
+   "model": "KMR221GLFS",
+   "package": "SMD,4.6x2.8mm",
+   "brand": "C&K",
+   "library": "expand",
+   "stock": 5788,
+   "price": 0.6515,
+   "manual": [
+    "封裝 JLC 寫「SMD,4.6x2.8mm」,KiCad 用 SW_Push_1P1T_NO_CK_KMR2,對不對要人看規格書"
+   ],
+   "errors": []
+  },
+  "BOOT|Button_Switch_SMD:SW_Push_1P1T_NO_CK_KMR2": {
+   "lcsc": "C72443",
+   "model": "KMR221GLFS",
+   "package": "SMD,4.6x2.8mm",
+   "brand": "C&K",
+   "library": "expand",
+   "stock": 5788,
+   "price": 0.6515,
+   "manual": [
+    "封裝 JLC 寫「SMD,4.6x2.8mm」,KiCad 用 SW_Push_1P1T_NO_CK_KMR2,對不對要人看規格書"
+   ],
+   "errors": []
+  },
+  "ESP32-C3-WROOM-02-N4|RF_Module:ESP32-C3-WROOM-02": {
+   "lcsc": "C2934560",
+   "model": "ESP32-C3-WROOM-02-N4",
+   "package": "SMD,20x18mm",
+   "brand": "Espressif Systems",
+   "library": "expand",
+   "stock": 10424,
+   "price": 3.2949,
+   "manual": [
+    "封裝 JLC 寫「SMD,20x18mm」,KiCad 用 ESP32-C3-WROOM-02,對不對要人看規格書"
+   ],
+   "errors": []
+  },
+  "LP38693MP-3.3|Package_TO_SOT_SMD:SOT-223-5": {
+   "lcsc": "C130904",
+   "model": "LP38693MP-3.3/NOPB",
+   "package": "SOT-223-5",
+   "brand": "Texas Instruments",
+   "library": "expand",
+   "stock": 296,
+   "price": 1.702,
+   "manual": [],
+   "errors": []
+  },
+  "ULN2803A|Package_SO:SOIC-18W_7.5x11.6mm_P1.27mm": {
+   "lcsc": "C9683",
+   "model": "ULN2803ADWR",
+   "package": "SOIC-18-300mil",
+   "brand": "Texas Instruments",
+   "library": "expand",
+   "stock": 647,
+   "price": 6.2852,
+   "manual": [],
+   "errors": []
+  }
+ }
+}

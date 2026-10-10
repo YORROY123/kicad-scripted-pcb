@@ -1,0 +1,43 @@
+{
+ "100nF|Capacitor_SMD:C_0402_1005Metric": {
+  "lcsc": "C1525",
+  "model": "CL05B104KO5NNNC"
+ },
+ "4.7uF|Capacitor_SMD:C_0805_2012Metric": {
+  "lcsc": "C1779",
+  "model": "CL21A475KAQNNNE"
+ },
+ "SS34|Diode_SMD:D_SMA": {
+  "lcsc": "C8678",
+  "model": "SS34"
+ },
+ "USBLC6-2SC6|Package_TO_SOT_SMD:SOT-23-6": {
+  "lcsc": "C7519",
+  "model": "USBLC6-2SC6"
+ },
+ "SMAJ5.0A|Diode_SMD:D_SMA": {
+  "lcsc": "C83329",
+  "model": "SMAJ5.0A"
+ },
+ "USB-C|Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12": {
+  "lcsc": "C165948",
+  "model": "TYPE-C-31-M-12",
+  "note": "KiCad 封裝就是 HRO TYPE-C-31-M-12"
+ },
+ "KT-0805Y|LED_SMD:LED_0805_2012Metric": {
+  "lcsc": "C2296",
+  "model": "KT-0805Y"
+ },
+ "5.1k|Resistor_SMD:R_0402_1005Metric": {
+  "lcsc": "C25905",
+  "model": "0402WGF5101TCE"
+ },
+ "1k|Resistor_SMD:R_0402_1005Metric": {
+  "lcsc": "C11702",
+  "model": "0402WGF1001TCE"
+ },
+ "LP38693MP-3.3|Package_TO_SOT_SMD:SOT-223-5": {
+  "lcsc": "C130904",
+  "model": "LP38693MP-3.3"
+ }
+}

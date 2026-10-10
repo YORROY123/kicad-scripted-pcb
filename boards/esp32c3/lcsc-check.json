@@ -1,0 +1,213 @@
+{
+ "lcsc_json_sha256": "a83cf2fcb8808bcf",
+ "checked": "2026-10-10",
+ "boards": 5,
+ "parts": {
+  "1uF|Capacitor_SMD:C_0402_1005Metric": {
+   "lcsc": "C52923",
+   "model": "CL05A105KA5NQNC",
+   "package": "0402",
+   "brand": "Samsung Electro-Mechanics",
+   "library": "base",
+   "stock": 7273713,
+   "price": 0.0087,
+   "manual": [],
+   "errors": []
+  },
+  "10uF|Capacitor_SMD:C_0805_2012Metric": {
+   "lcsc": "C15850",
+   "model": "CL21A106KAYNNNE",
+   "package": "0805",
+   "brand": "Samsung Electro-Mechanics",
+   "library": "base",
+   "stock": 4324186,
+   "price": 0.0688,
+   "manual": [],
+   "errors": []
+  },
+  "100nF|Capacitor_SMD:C_0402_1005Metric": {
+   "lcsc": "C1525",
+   "model": "CL05B104KO5NNNC",
+   "package": "0402",
+   "brand": "Samsung Electro-Mechanics",
+   "library": "base",
+   "stock": 24127635,
+   "price": 0.0045,
+   "manual": [],
+   "errors": []
+  },
+  "10nF|Capacitor_SMD:C_0402_1005Metric": {
+   "lcsc": "C15195",
+   "model": "CL05B103KB5NNNC",
+   "package": "0402",
+   "brand": "Samsung Electro-Mechanics",
+   "library": "base",
+   "stock": 3598152,
+   "price": 0.005,
+   "manual": [],
+   "errors": []
+  },
+  "USBLC6-2SC6|Package_TO_SOT_SMD:SOT-23-6": {
+   "lcsc": "C7519",
+   "model": "USBLC6-2SC6",
+   "package": "SOT-23-6L",
+   "brand": "STMicroelectronics",
+   "library": "expand",
+   "stock": 39786,
+   "price": 0.177,
+   "manual": [],
+   "errors": []
+  },
+  "BLUE|LED_SMD:LED_0805_2012Metric": {
+   "lcsc": "C84259",
+   "model": "NCD0805B2",
+   "package": "0805",
+   "brand": "Foshan NationStar Optoelectronics",
+   "library": "expand",
+   "stock": 383048,
+   "price": 0.0268,
+   "manual": [],
+   "errors": []
+  },
+  "GREEN|LED_SMD:LED_0805_2012Metric": {
+   "lcsc": "C2297",
+   "model": "KT-0805G",
+   "package": "0805",
+   "brand": "Hubei KENTO Elec",
+   "library": "base",
+   "stock": 2908205,
+   "price": 0.0163,
+   "manual": [],
+   "errors": []
+  },
+  "USB-C|Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12": {
+   "lcsc": "C165948",
+   "model": "TYPE-C-31-M-12",
+   "package": "SMD",
+   "brand": "Korean Hroparts Elec",
+   "library": "expand",
+   "stock": 409148,
+   "price": 0.186,
+   "manual": [
+    "封裝 JLC 寫「SMD」,KiCad 用 USB_C_Receptacle_HRO_TYPE-C-31-M-12,對不對要人看規格書"
+   ],
+   "errors": []
+  },
+  "IO|Connector_PinHeader_2.54mm:PinHeader_1x08_P2.54mm_Vertical": {
+   "lcsc": "C492407",
+   "model": "PZ254V-11-08P",
+   "package": "Plugin,P=2.54mm",
+   "brand": "XFCN",
+   "library": "expand",
+   "stock": 335941,
+   "price": 0.0479,
+   "manual": [],
+   "errors": []
+  },
+  "AO3401A|Package_TO_SOT_SMD:SOT-23": {
+   "lcsc": "C15127",
+   "model": "AO3401A",
+   "package": "SOT-23",
+   "brand": "Alpha & Omega Semicon",
+   "library": "base",
+   "stock": 681668,
+   "price": 0.1018,
+   "manual": [],
+   "errors": []
+  },
+  "5.1k|Resistor_SMD:R_0402_1005Metric": {
+   "lcsc": "C25905",
+   "model": "0402WGF5101TCE",
+   "package": "0402",
+   "brand": "UNI-ROYAL(Uniroyal Elec)",
+   "library": "base",
+   "stock": 5623714,
+   "price": 0.0024,
+   "manual": [],
+   "errors": []
+  },
+  "10k|Resistor_SMD:R_0402_1005Metric": {
+   "lcsc": "C25744",
+   "model": "0402WGF1002TCE",
+   "package": "0402",
+   "brand": "UNI-ROYAL(Uniroyal Elec)",
+   "library": "base",
+   "stock": 19803989,
+   "price": 0.0034,
+   "manual": [],
+   "errors": []
+  },
+  "1k|Resistor_SMD:R_0402_1005Metric": {
+   "lcsc": "C11702",
+   "model": "0402WGF1001TCE",
+   "package": "0402",
+   "brand": "UNI-ROYAL(Uniroyal Elec)",
+   "library": "base",
+   "stock": 8316707,
+   "price": 0.0035,
+   "manual": [],
+   "errors": []
+  },
+  "100k|Resistor_SMD:R_0402_1005Metric": {
+   "lcsc": "C25741",
+   "model": "0402WGF1003TCE",
+   "package": "0402",
+   "brand": "UNI-ROYAL(Uniroyal Elec)",
+   "library": "base",
+   "stock": 8094557,
+   "price": 0.0024,
+   "manual": [],
+   "errors": []
+  },
+  "RESET|Button_Switch_SMD:SW_Push_1P1T_NO_CK_KMR2": {
+   "lcsc": "C72443",
+   "model": "KMR221GLFS",
+   "package": "SMD,4.6x2.8mm",
+   "brand": "C&K",
+   "library": "expand",
+   "stock": 5788,
+   "price": 0.6515,
+   "manual": [
+    "封裝 JLC 寫「SMD,4.6x2.8mm」,KiCad 用 SW_Push_1P1T_NO_CK_KMR2,對不對要人看規格書"
+   ],
+   "errors": []
+  },
+  "BOOT|Button_Switch_SMD:SW_Push_1P1T_NO_CK_KMR2": {
+   "lcsc": "C72443",
+   "model": "KMR221GLFS",
+   "package": "SMD,4.6x2.8mm",
+   "brand": "C&K",
+   "library": "expand",
+   "stock": 5788,
+   "price": 0.6515,
+   "manual": [
+    "封裝 JLC 寫「SMD,4.6x2.8mm」,KiCad 用 SW_Push_1P1T_NO_CK_KMR2,對不對要人看規格書"
+   ],
+   "errors": []
+  },
+  "ESP32-C3-WROOM-02-N4|RF_Module:ESP32-C3-WROOM-02": {
+   "lcsc": "C2934560",
+   "model": "ESP32-C3-WROOM-02-N4",
+   "package": "SMD,20x18mm",
+   "brand": "Espressif Systems",
+   "library": "expand",
+   "stock": 10424,
+   "price": 3.2949,
+   "manual": [
+    "封裝 JLC 寫「SMD,20x18mm」,KiCad 用 ESP32-C3-WROOM-02,對不對要人看規格書"
+   ],
+   "errors": []
+  },
+  "LP38693MP-3.3|Package_TO_SOT_SMD:SOT-223-5": {
+   "lcsc": "C130904",
+   "model": "LP38693MP-3.3/NOPB",
+   "package": "SOT-223-5",
+   "brand": "Texas Instruments",
+   "library": "expand",
+   "stock": 296,
+   "price": 1.702,
+   "manual": [],
+   "errors": []
+  }
+ }
+}
