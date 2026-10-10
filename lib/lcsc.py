@@ -110,13 +110,17 @@ def main() -> int:
     boards = int(sys.argv[sys.argv.index("--boards") + 1]) if "--boards" in sys.argv else 5
     text = (bdir / "lcsc.json").read_text(encoding="utf-8")
     table = json.loads(text)
-    # 數量:從 fab.py 會用的分組來的,這裡只需要每列幾顆 → 讀 refs(lcsc.json 不存位號,改讀上次的 BOM 分組)
-    groups = json.loads((bdir / "fab" / "groups.json").read_text(encoding="utf-8"))
+    # 數量:從 net.txt(原理圖匯出的網表)按「值|封裝」分組
+    from review import Netlist
+    groups: dict[str, list[str]] = {}
+    for ref, c in Netlist(bdir / "net.txt").comps.items():
+        if not ref.startswith("#"):
+            groups.setdefault(f"{c['value']}|{c['footprint']}", []).append(ref)
     out, bad = {}, 0
     for key, e in table.items():
         refs = groups.get(key)
         if refs is None:
-            print(f"✗ {key}:板上沒有這個「值|封裝」(先跑一次 build 產生 fab/groups.json)")
+            print(f"✗ {key}:板上沒有這個「值|封裝」(值或封裝改過?)")
             bad += 1
             continue
         if e.get("assemble") is False:
@@ -133,7 +137,9 @@ def main() -> int:
         lib = {"base": "基礎", "expand": "擴展"}.get(c["componentLibraryType"], c["componentLibraryType"])
         out[key] = {"lcsc": e["lcsc"], "model": c["componentModelEn"], "package": c["componentSpecificationEn"],
                     "brand": c["componentBrandEn"], "library": c["componentLibraryType"],
-                    "stock": c["stockCount"], "price": c.get("initialPrice"), "manual": manual, "errors": errs}
+                    "stock": c["stockCount"], "price": c.get("initialPrice"), "manual": manual, "errors": errs,
+                    "attrs": {a["attribute_name_en"]: a["attribute_value_name"] for a in c.get("attributes") or []
+                              if a["attribute_value_name"] not in ("-", "")}}
         mark = "✗" if errs else "✓"
         print(f"{mark}  {key.split('|')[0]:22s} {e['lcsc']:>9} {c['componentModelEn'][:26]:26s} "
               f"{lib} 庫存 {c['stockCount']}")

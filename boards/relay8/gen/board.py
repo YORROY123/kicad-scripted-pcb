@@ -95,7 +95,8 @@ add("U2", "Regulator_Linear", "LP38693MP-3.3", 100, 30, "LP38693MP-3.3",
 add("C1", "Device", "C", 84, 30, "1uF", C0402, {"1": "5V_SYS", "2": "GND"})
 add("C2", "Device", "C", 116, 30, "10uF", C0805, {"1": "+3V3", "2": "GND"})
 add("C3", "Device", "C", 124, 30, "100nF", C0402, {"1": "+3V3", "2": "GND"})
-add("R8", "Device", "R", 100, 60, "1k", R0402, {"1": "+3V3", "2": "LED_PWR_A"})
+# 綠光 Vf 2.6–3.1V,經 1k 只有約 0.45mA(lib/review.py)→ 220Ω,約 2mA
+add("R8", "Device", "R", 100, 60, "220", R0402, {"1": "+3V3", "2": "LED_PWR_A"})
 add("D3", "Device", "LED", 100, 74, "GREEN", LED0805, {"2": "LED_PWR_A", "1": "GND"})
 
 # ── 复位、启动、strapping ───────────────────────────────────────────────

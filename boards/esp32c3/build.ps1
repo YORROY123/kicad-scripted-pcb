@@ -8,6 +8,8 @@ Step 'ERC'           { & $cli sch erc --severity-all --exit-code-violations -o e
 Step 'netlist'       { & $cli sch export netlist --format kicadsexpr -o net.txt esp32c3.kicad_sch | Out-Null }
 # ERC ignores "global label appears only once" by default: a typo in a label is caught only here
 Step 'netlist check' { & $kpy "$Lib\check_netlist.py" . }
+# Design review: datasheet rules on the netlist (TVS polarity, LED current, decoupling, straps...)
+Step 'review'        { & $kpy "$Lib\review.py" . }
 Step 'PCB'           { & $kpy gen/pcb.py }
 Step 'DSN'           { & $kpy "$Lib\route.py" dsn esp32c3 . }
 # Automatic neck-down narrows tracks to 0.125 mm next to 0402 pads (below JLCPCB's 0.127 mm).

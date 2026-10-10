@@ -9,10 +9,16 @@
    "package": "0402",
    "brand": "Samsung Electro-Mechanics",
    "library": "base",
-   "stock": 24127635,
+   "stock": 24133642,
    "price": 0.0045,
    "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Voltage Rating": "16V",
+    "Tolerance": "±10%",
+    "Capacitance": "100nF",
+    "Temperature Coefficient": "X7R"
+   }
   },
   "4.7uF|Capacitor_SMD:C_0805_2012Metric": {
    "lcsc": "C1779",
@@ -20,10 +26,16 @@
    "package": "0805",
    "brand": "Samsung Electro-Mechanics",
    "library": "base",
-   "stock": 2637099,
+   "stock": 2637556,
    "price": 0.0346,
    "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Voltage Rating": "25V",
+    "Tolerance": "±10%",
+    "Capacitance": "4.7uF",
+    "Temperature Coefficient": "X5R"
+   }
   },
   "SS34|Diode_SMD:D_SMA": {
    "lcsc": "C8678",
@@ -31,10 +43,18 @@
    "package": "SMA(DO-214AC)",
    "brand": "MDD(Microdiode Semiconductor)",
    "library": "base",
-   "stock": 4166817,
+   "stock": 4167564,
    "price": 0.0349,
    "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Voltage - Forward(Vf@If)": "550mV@3A",
+    "Voltage - DC Reverse(Vr)": "40V",
+    "Operating Junction Temperature Range": "-55℃~+125℃",
+    "Diode Configuration": "Standalone",
+    "Current - Rectified": "3A",
+    "Reverse Leakage Current (Ir)": "500uA@40V"
+   }
   },
   "USBLC6-2SC6|Package_TO_SOT_SMD:SOT-23-6": {
    "lcsc": "C7519",
@@ -42,10 +62,23 @@
    "package": "SOT-23-6L",
    "brand": "STMicroelectronics",
    "library": "expand",
-   "stock": 39784,
+   "stock": 39735,
    "price": 0.177,
    "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Operating Temperature": "-40℃~+125℃@(Tj)",
+    "Type": "ESD",
+    "Junction Capacitance": "3.5pF",
+    "Number of Channels": "2",
+    "level of protection": "IEC 61000-4-2",
+    "Clamping Voltage": "17V",
+    "Polarity": "Unidirectional",
+    "Peak Pulse Current (Ipp)": "5A",
+    "Voltage - Breakdown": "6V",
+    "Reverse Stand-Off Voltage (Vrwm)": "5.25V",
+    "Reverse Leakage Current (Ir)": "150nA"
+   }
   },
   "SMAJ5.0A|Diode_SMD:D_SMA": {
    "lcsc": "C83329",
@@ -56,7 +89,20 @@
    "stock": 29987,
    "price": 0.1237,
    "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Operating Temperature": "-65℃~+150℃",
+    "Type": "TVS",
+    "Peak Pulse Power Dissipation (Ppp)": "400W@10/1000us",
+    "Number of Channels": "1",
+    "level of protection": "IEC 61000-4-2、IEC 61000-4-4",
+    "Clamping Voltage": "9.2V",
+    "Polarity": "Unidirectional",
+    "Peak Pulse Current (Ipp)": "43.5A",
+    "Voltage - Breakdown": "6.4V",
+    "Reverse Stand-Off Voltage (Vrwm)": "5V",
+    "Reverse Leakage Current (Ir)": "800uA"
+   }
   },
   "USB-C|Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12": {
    "lcsc": "C165948",
@@ -64,12 +110,24 @@
    "package": "SMD",
    "brand": "Korean Hroparts Elec",
    "library": "expand",
-   "stock": 409148,
+   "stock": 409394,
    "price": 0.186,
    "manual": [
     "封裝 JLC 寫「SMD」,KiCad 用 USB_C_Receptacle_HRO_TYPE-C-31-M-12,對不對要人看規格書"
    ],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Operating Temperature": "-30℃~+80℃",
+    "Number of Ports": "1",
+    "Length": "7.35mm",
+    "Current Rating-Power": "5A",
+    "Voltage Rating": "20V",
+    "Connector Type": "Type-C",
+    "Number of Contacts": "16P",
+    "Gender": "Female",
+    "Connect-Disconnect Life": "10,000 cycles",
+    "Mounting Type": "Surface Mount, Right Angle"
+   }
   },
   "KT-0805Y|LED_SMD:LED_0805_2012Metric": {
    "lcsc": "C2296",
@@ -80,7 +138,19 @@
    "stock": 322832,
    "price": 0.0153,
    "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Operating Temperature": "-40℃~+85℃",
+    "Wavelength - Dominant": "584nm~594nm",
+    "Viewing Angle": "120°",
+    "Luminous Intensity": "175mcd",
+    "Power(Watts)": "40mW",
+    "Diode Configuration": "Discrete Diode",
+    "Illumination Color": "Yellow",
+    "Lens Color": "Water Clear",
+    "Peak Wavelength": "596nm",
+    "Voltage - Forward(Vf)": "1.8V~2.4V"
+   }
   },
   "5.1k|Resistor_SMD:R_0402_1005Metric": {
    "lcsc": "C25905",
@@ -88,10 +158,19 @@
    "package": "0402",
    "brand": "UNI-ROYAL(Uniroyal Elec)",
    "library": "base",
-   "stock": 5623714,
+   "stock": 5624734,
    "price": 0.0024,
    "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Resistance": "5.1kΩ",
+    "Operating Temperature": "-55℃~+155℃",
+    "Power(Watts)": "62.5mW",
+    "Type": "Thick Film Resistor",
+    "Voltage-Supply(Max)": "50V",
+    "Tolerance": "±1%",
+    "Temperature Coefficient": "±100ppm/℃"
+   }
   },
   "1k|Resistor_SMD:R_0402_1005Metric": {
    "lcsc": "C11702",
@@ -99,10 +178,19 @@
    "package": "0402",
    "brand": "UNI-ROYAL(Uniroyal Elec)",
    "library": "base",
-   "stock": 8316707,
+   "stock": 8315272,
    "price": 0.0035,
    "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Resistance": "1kΩ",
+    "Operating Temperature": "-55℃~+155℃",
+    "Power(Watts)": "62.5mW",
+    "Type": "Thick Film Resistor",
+    "Voltage-Supply(Max)": "50V",
+    "Tolerance": "±1%",
+    "Temperature Coefficient": "±100ppm/℃"
+   }
   },
   "LP38693MP-3.3|Package_TO_SOT_SMD:SOT-223-5": {
    "lcsc": "C130904",
@@ -113,7 +201,20 @@
    "stock": 296,
    "price": 1.702,
    "manual": [],
-   "errors": []
+   "errors": [],
+   "attrs": {
+    "Power Supply Rejection Ratio (PSRR)": "55dB@(120Hz)",
+    "Operating Temperature": "-40℃~+125℃@(Tj)",
+    "standby current": "55uA",
+    "Voltage - Supply": "10V",
+    "Output Type": "Fixed",
+    "Output Current": "500mA",
+    "Output Configuration": "Positive",
+    "Features": "Over Current Protection、Thermal shutdown、Enable control、Input under-voltage protection",
+    "Voltage Dropout": "550mV@(0.5A)",
+    "Output Voltage": "3.3V",
+    "Number of Outputs": "1"
+   }
   }
  }
 }

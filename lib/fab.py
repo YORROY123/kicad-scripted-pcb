@@ -8,7 +8,6 @@
   <板>-cpl.csv          Designator, Mid X, Mid Y, Layer, Rotation(套用 lib/jlc_rotations.json)
   hand-solder.csv       LCSC 買不到、要自購手焊的件
   rotation-review.csv   每顆件的角度與依據,上傳後在 JLC 貼片預覽逐顆對照
-  groups.json           「值|封裝」→ 位號,給 lib/lcsc.py 算數量
 
 料號只讀 <板目錄>/lcsc-check.json(lib/lcsc.py 連線核對 lcsc.json 後寫出,含雜湊)。
 沒核對、或 lcsc.json 改過沒重新核對、或有任何一列沒有料號也沒標明不貼 → 不寫 zip。
@@ -137,7 +136,8 @@ def main() -> int:
     if hits != vias + holes:
         problems.append(f"鑽孔檔 {hits} 個孔,板檔有 {vias} 過孔 + {holes} 有孔焊盤 = {vias + holes}")
 
-    (out / "missing-lcsc.txt").unlink(missing_ok=True)   # 舊版留下的
+    for old in ("missing-lcsc.txt", "groups.json"):    # 舊版留下的
+        (out / old).unlink(missing_ok=True)
 
     # ── 讀 BOM 分組(原理圖)──
     raw = out / "bom-raw.csv"
@@ -153,8 +153,6 @@ def main() -> int:
                     groups[f"{r['Value']}|{r['Footprint']}"].append(ref)
     raw.unlink()
     groups = {k: sorted(v, key=natural) for k, v in sorted(groups.items(), key=lambda kv: natural(min(kv[1], key=natural)))}
-    # lcsc.py 用這份算每列數量
-    (out / "groups.json").write_text(json.dumps(groups, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
     # ── 料號:只吃 lcsc.py 核對過的結果 ──
     parts: dict[str, dict] = {}

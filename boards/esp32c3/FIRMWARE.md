@@ -12,7 +12,7 @@ ESP32-C3-WROOM-02-N4: RISC-V @ 160 MHz, 4 MB flash, Wi-Fi 2.4 GHz + Bluetooth 5 
 |---|---|---|
 | IO18 / IO19 | USB D− / D+ (USB-C) | Native USB Serial/JTAG. Do not use as GPIO. |
 | IO20 / IO21 | UART0 RX / TX | Also on header J2 pins 4 / 3 |
-| IO10 | Blue user LED (D2), active **high**, via 1 kΩ | |
+| IO10 | Yellow user LED (D2), active **high**, via 470 Ω | |
 | IO4 – IO7 | Header J2 pins 5 – 8 | Free GPIO, 3.3 V logic |
 | IO9 | BOOT button (SW2) to GND, 10 kΩ pull-up | Strapping pin: low at reset = download mode |
 | IO8 | 10 kΩ pull-up | Strapping pin: must be high at reset. Avoid as output. |
@@ -39,7 +39,7 @@ Header J2 (1×8, 2.54 mm): 1 3V3 · 2 GND · 3 TXD · 4 RXD · 5 IO4 · 6 IO5 ·
 ## First program (Arduino)
 
 ```cpp
-const int LED = 10;  // blue user LED, active high
+const int LED = 10;  // yellow user LED, active high
 
 void setup() {
   pinMode(LED, OUTPUT);
