@@ -7,11 +7,13 @@
 """
 from __future__ import annotations
 
+import copy
 import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import review  # noqa: E402
 from review import Netlist, Review  # noqa: E402
 
 BOARDS = Path(__file__).resolve().parent.parent / "boards"
@@ -75,6 +77,12 @@ CASES = [
     ("relay8", "inductive", "K1", "ULN2803 COM 接地(沒有續流)", lambda nl: move(nl, "U3", "10", "GND")),
     ("relay8", "cap-voltage", "C5", "電解電容反接", lambda nl: swap(nl, "C5", "1", "2")),
     ("relay8", "rail-range", "U1", "模組 3V3 接到 5V", lambda nl: move(nl, "U1", "1", "5V_PS")),
+    ("relay8", "supply-budget", "U2", "電源燈電阻 220Ω → 1Ω(3V3 超過 LDO 500mA)", lambda nl: set_value(nl, "R8", "1")),
+    ("esp32c3", "supply-budget", "U1", "LDO 換成只能供 300mA 的型號(模組要 ≥ 500mA)",
+     lambda nl: review.SOURCE_RATING["Regulator_Linear:LP38693MP-3.3"].update(OUT=(0.3, "假設"))),
+    ("esp32c3", "ldo-thermal", "U2", "環境溫度 50 → 85°C", lambda nl: setattr(review, "TA", 85.0)),
+    ("esp32c3", "vbus-cap", "J1", "拿掉軟啟動的閘-源電容 C6", lambda nl: remove(nl, "C6")),
+    ("esp32c3", "vbus-cap", "J1", "VBUS 電容 1µF → 22µF", lambda nl: set_value(nl, "C1", "22uF")),
 ]
 
 
@@ -92,12 +100,15 @@ def main() -> int:
         print(f"{'PASS' if not e else 'FAIL'}  {board}:原樣 0 ERROR" + (f",實際 {e}" if e else ""))
         bad += bool(e)
     for board, rule, ref, what, mutate in CASES:
+        saved = {k: copy.deepcopy(getattr(review, k)) for k in ("TA", "SOURCE_RATING")}
         nl, parts, waivers = load(board)
         parts = {**parts, **EXTRA_PARTS}
         mutate(nl)
         hit = [x for x in errors(nl, parts, waivers) if x[0] == rule and x[1] == ref]
         print(f"{'PASS' if hit else 'FAIL'}  {board}:{what} → {rule} {ref}" + (f"\n        {hit[0][2]}" if hit else ""))
         bad += not hit
+        for k, v in saved.items():
+            setattr(review, k, v)
     print("全部通過" if not bad else f"{bad} 項未通過")
     return 1 if bad else 0
 

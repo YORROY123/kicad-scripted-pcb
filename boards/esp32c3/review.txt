@@ -3,9 +3,13 @@ OK    decoupling      U2    IN(VSW,4.40–5.25V)對地 1.00µF:C5 1uF
 OK    esp32c3-en      U1    EN RC = R3 10k × C4 1uF = 10.0 ms(Espressif 建議 10k × 1µF = 10 ms)
 OK    esp32c3-usb     U1    IO18 = USB D-
 OK    esp32c3-usb     U1    IO19 = USB D+
+OK    ldo-thermal     U2    耗散最壞 (5.25 − 3.23)V × 348mA = 0.70W → Tj = 50 + 0.70 × 68.5 = 98°C(上限 125°C;LP38693 規格書 §7.5:SOT-223 RθJA 68.5°C/W(JEDEC 4 層 High-K 板;雙層板更差))
 OK    led-current     D2    KT-0805Y 經 R7 470:電流 1.49 / 2.34 / 3.19 mA(最壞 / 中間 / 最大;電源 3.10–3.30V、Vf 1.8–2.4V、低側 0.00V)
 OK    led-current     D3    GREEN 經 R8 220:電流 0.61 / 2.05 / 3.48 mA(最壞 / 中間 / 最大;電源 3.23–3.37V、Vf 2.6–3.1V、低側 0.00V)
+OK    supply-budget   J1    VBUS(VBUS)最壞拉 348mA / 額定 500mA(USB 2.0 / Type-C 預設電流(Rd 5.1k 受電端,沒有 PD 協商):500mA)
+OK    supply-budget   U2    OUT(+3V3)最壞拉 348mA / 額定 500mA(LP38693 規格書 SNVS321O:500mA);本網負載:D3 LED 3mA, U1 ESP32-C3-WROOM-02-N4 345mA
 OK    usb-c-sink      J1    CC1 → R1 5.1k 對地
 OK    usb-c-sink      J1    CC2 → R2 5.1k 對地
-設計審查:ERROR 0、WARN 0、INFO 0、OK 9
+OK    vbus-cap        J1    VBUS 直接 1.0µF + LDO 後面 0.0µF ≤ 10µF(軟啟動 Q1 之後的不算)
+設計審查:ERROR 0、WARN 0、INFO 0、OK 13
 推算出的網電壓:+3V3 3.23–3.37V、GND 0.00V、VBUS 4.40–5.25V、VSW 4.40–5.25V
