@@ -25,7 +25,7 @@ Header J2 (1×8, 2.54 mm): 1 3V3 · 2 GND · 3 TXD · 4 RXD · 5 IO4 · 6 IO5 ·
 ## Power
 
 - USB-C 5 V → LP38693MP-3.3 LDO (500 mA, ~330 mV dropout, 12 V absolute maximum input). The green LED D3 shows 3V3 is up.
-- Known limitation: on hot-plug the board (with the module's own ~12 µF) draws about 79 µC, above USB 2.0's 50 µC inrush limit. Hosts tolerate it in practice; it is a compliance issue, not a damage risk. See `sim/power_sim.py`.
+- VBUS soft-start: P-MOSFET Q1 (AO3401A) between VBUS and the LDO, gate RC R9 100k / C6 100nF / C7 10nF. Without it the module's own ~12 µF plus C2 drew ~79 µC on hot-plug (USB 2.0 limit 50 µC). Simulated (`sim/softstart_sim.py`): ramp current 80–97 mA, 3V3 ready in 1.3–3.7 ms across the MOSFET's threshold range. Replugging within ~10 ms of unplugging skips part of the soft-start (C6 discharges through R9).
 - Budget for J2's 3V3 pin: roughly 600 mA minus the module (Wi-Fi TX peaks ~350 mA) → keep external loads under ~200 mA.
 - There is no battery input and no 5 V on the header.
 

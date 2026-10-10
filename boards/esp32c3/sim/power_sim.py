@@ -1,4 +1,4 @@
-"""USB 熱插拔模擬:esp32c3 與 relay8 的 VBUS → AP2112K-3.3 電源路徑。
+"""USB 熱插拔模擬(未加軟啟動的電源路徑;esp32c3 加了軟啟動後見 softstart_sim.py):esp32c3 與 relay8 的 VBUS → AP2112K-3.3 電源路徑。
 
     python boards/esp32c3/sim/power_sim.py
 

@@ -9,8 +9,8 @@
 
 电源吸取 usbc-ldo 那块板子的模拟教训(见 AGENTS.md):
   - 不串二极管、LDO 用 LP38693MP-3.3(壓差 ~330mV @0.5A;輸入耐壓 12V,扛得住熱插拔過衝)
-  - 插入浪湧:VBUS 側只放 1µF。注意模組內部還有約 12.3µF,模擬總注入電荷約 79µC,
-    超過 USB 2.0 的 50µC(合規問題,非損壞風險;見 sim/power_sim.py)
+  - 插入浪湧:模組內部還有約 12.3µF,直接接 VBUS 會灌進約 79µC(> USB 2.0 的 50µC)
+    → 加 P-MOSFET 軟啟動(Q1,見下方與 sim/softstart_sim.py)
 
 画法:网络标签式。每个引脚沿「离开器件」的方向拉 2.54mm 短线挂一个全局标签,
 电路本身就是下面那张「引脚 → 网络」对照表,审查时逐行对 datasheet 即可。
@@ -126,12 +126,28 @@ flag("GND", 28, 30)
 # (sim/power_sim.py)。500mA 剛好滿足模組規格書「外部電源 ≥0.5A」。
 add("U2", "Regulator_Linear", "LP38693MP-3.3", 100, 30, "LP38693MP-3.3",
     "Package_TO_SOT_SMD:SOT-223-5", {
-        "4": "VBUS", "1": "VBUS",        # EN 接 IN:有 USB 電就輸出(折返限流此時有效)
+        "4": "VSW", "1": "VSW",          # EN 接 IN:軟啟動後的電源一到就輸出(折返限流此時有效)
         "5": "GND", "3": "+3V3", "2": None,
     })
 add("C1", "Device", "C", 82, 30, "1uF", C0402, {"1": "VBUS", "2": "GND"})
 add("C2", "Device", "C", 118, 30, "10uF", C0805, {"1": "+3V3", "2": "GND"})
 add("C3", "Device", "C", 126, 30, "100nF", C0402, {"1": "+3V3", "2": "GND"})
+
+# ── VBUS 軟啟動(sim/softstart_sim.py)───────────────────────────────────
+# 模組內部約 12.3µF + C2 10µF 掛在 LDO 後面,直接接 VBUS 插入時灌進約 79µC,
+# 超過 USB 2.0 的 50µC(10µF 等效)。P-MOSFET 串在 VBUS 與 LDO 之間:
+#   插入瞬間 C6 把閘極綁在源極 → 先關著;R9 慢慢把閘極拉向地 → 逐漸導通;
+#   C7(閘-汲)讓輸出等斜率爬升:爬升段電流 80–97mA(Vth −0.5…−1.3V),3V3 1.3–3.7ms 就緒。
+# AO3401A(AOS Rev 3.1):VDS −30V、VGS ±12V、RDS(on) <60mΩ @ −4.5V。
+# 限制:拔掉後 C6 經 R9 放電(時間常數 10ms),拔插間隔太短時軟啟動不完整。
+add("Q1", "Transistor_FET", "AO3401A", 100, 10, "AO3401A",
+    "Package_TO_SOT_SMD:SOT-23", {"1": "SS_G", "2": "VBUS", "3": "VSW"})
+add("R9", "Device", "R", 140, 10, "100k", R0402, {"1": "SS_G", "2": "GND"})
+add("C6", "Device", "C", 148, 10, "100nF", C0402, {"1": "SS_G", "2": "VBUS"})
+add("C7", "Device", "C", 156, 10, "10nF", C0402, {"1": "SS_G", "2": "VSW"})
+add("C5", "Device", "C", 164, 10, "1uF", C0402, {"1": "VSW", "2": "GND"})
+# VSW 只經 MOSFET(passive)進來,ERC 會判 LDO 的 power_in 未被驅動;這裡確實是電源入口
+flag("VSW", 172, 10)
 
 # ── ESP32-C3 模块 ──────────────────────────────────────────────────────
 add("U1", "RF_Module", "ESP32-C3-WROOM-02", 170, 80, "ESP32-C3-WROOM-02-N4",
