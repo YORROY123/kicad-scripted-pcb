@@ -1,0 +1,3 @@
+{
+ "vbus-cap|J1": "未修(待辦):USB 只用來燒錄,平常由 HLK-10M05 供電;但插 USB 時仍會超過 USB 2.0 的 50µC。修法是照 esp32c3 在 VBUS 加 AO3401A 軟啟動。FIRMWARE.md 已註明"
+}

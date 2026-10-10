@@ -37,6 +37,12 @@ One mains cable powers everything.
 The HLK 5 V output and USB VBUS are diode-OR'ed (SS34) into the 3.3 V regulator, so USB can stay
 connected while mains is on without back-feeding the computer.
 
+**Known USB limit (not fixed yet):** there is no soft-start on VBUS. Behind the LDO sit C2 10 µF and
+the module's own ~12.3 µF, so hot-plugging USB draws more than the USB 2.0 inrush allowance
+(10 µF / 50 µC). Laptops and hubs normally tolerate this, but it is out of spec. The fix is the
+AO3401A soft-start used on `../esp32c3` (`lib/review.py` rule `vbus-cap` flags it; waived in
+`review-waivers.json` until then).
+
 Protection: **F1 T8A** (5×20 mm) in the live feed, then a 14D431K varistor across L–N, then
 **F2 T1A** (TR5) in front of the AC-DC module.
 

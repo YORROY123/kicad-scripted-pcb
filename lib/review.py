@@ -17,6 +17,9 @@ ERC 只看腳位類型、網表比對只看有沒有照 board.py 畫。兩者都
   esp32c3-*       EN 的 RC、GPIO2/8/9 開機腳、GPIO18/19 = D−/D+
   inductive       繼電器線圈要有續流路徑(ULN2803 的 COM 接線圈電源,或反向二極體);吸合電壓
   cap-voltage     電容耐壓(lcsc-check.json 的 Voltage Rating)與電解電容極性
+  supply-budget   每個電源(LDO / AC-DC / USB VBUS)最壞要供多少電流 vs 額定;ESP32 要求供電 ≥ 0.5A
+  ldo-thermal     線性穩壓器 Tj = Ta + (Vin最高 − Vout最低) × I × RθJA,Ta 取 50°C
+  vbus-cap        USB VBUS 的電容(含經二極體、LDO 之後、模組內部)≤ 10µF,除非中間有軟啟動
 
 有些結論是已知、刻意的取捨:寫在 <板目錄>/review-waivers.json({"規則|位號": "理由"}),
 該項降為 INFO 並印出理由。有 ERROR(沒被豁免)就回傳 1。
@@ -71,6 +74,31 @@ INDUCTIVE = {
 }
 SPECIFIC_LIBS = ("Diode", "Regulator_Linear", "Power_Protection", "Transistor_FET", "Transistor_Array")
 LED_MIN_MA, LED_MAX_MA = 0.5, 20.0
+
+# 電流來源的額定:lib_id → {腳位名稱: (A, 出處)}
+SOURCE_RATING = {
+    "Regulator_Linear:LP38693MP-3.3": {"OUT": (0.5, "LP38693 規格書 SNVS321O:500mA")},
+    "Converter_ACDC:HLK-10M05": {"+Vout": (2.0, "Hi-Link HLK-10M05:10W / 5V = 2A")},
+    "Connector:USB_C_Receptacle_USB2.0_16P": {
+        "VBUS": (0.5, "USB 2.0 / Type-C 預設電流(Rd 5.1k 受電端,沒有 PD 協商):500mA")},
+}
+# 固定負載:lib_id → {腳位名稱: (A, 出處)}
+LOADS = {
+    "RF_Module:ESP32-C3-WROOM-02": {"3V3": (0.345, "WROOM-02 規格書表 6-4:802.11b @20.5dBm TX,100% 佔空比 345mA")},
+}
+# 對供電端的最低要求(跟實際耗電無關,是廠商要求的供電能力)
+NEEDS_SOURCE = {
+    "RF_Module:ESP32-C3-WROOM-02": {"3V3": (0.5, "WROOM-02 規格書表 6-2:外部電源至少供 0.5A")},
+}
+# 線性穩壓器:lib_id → (輸入腳, 輸出腳, RθJA °C/W, Tj 上限, 出處)
+LINEAR = {
+    "Regulator_Linear:LP38693MP-3.3": ("IN", "OUT", 68.5, 125.0,
+                                       "LP38693 規格書 §7.5:SOT-223 RθJA 68.5°C/W(JEDEC 4 層 High-K 板;雙層板更差)"),
+}
+TA = 50.0                               # 假設的環境溫度(裝在外殼裡)
+# 模組內部、網表看不到的電容
+MODULE_CAP = {"RF_Module:ESP32-C3-WROOM-02": (12.3e-6, "WROOM-02 規格書 v1.7 圖 8-1:模組內 3V3 約 12.3µF")}
+USB_VBUS_CAP = 10e-6                    # USB 2.0 §7.2.4.1:VBUS 上直接的負載電容上限
 
 
 # ── 網表 ────────────────────────────────────────────────────────────────
@@ -179,6 +207,8 @@ class Review:
         self.nl, self.parts, self.waivers = nl, parts, waivers
         self.findings: list[tuple[str, str, str, str]] = []   # (等級, 規則, 位號, 訊息)
         self.v: dict[str, tuple] = {}
+        self.load: dict[str, list[tuple[float, str]]] = {}     # 網 → [(A, 說明)]
+        self._i: dict[str, float] = {}
 
     def add(self, level, rule, ref, msg):
         w = self.waivers.get(f"{rule}|{ref}")
@@ -247,7 +277,8 @@ class Review:
     def run(self):
         self.voltages()
         for f in (self.diodes, self.symbol_value, self.supplies, self.inputs, self.leds, self.usb_c,
-                  self.usb_esd, self.esp32c3, self.inductive, self.caps):
+                  self.usb_esd, self.esp32c3, self.inductive, self.caps, self.budget, self.thermal,
+                  self.vbus_cap):
             f()
 
     def diodes(self):
@@ -371,6 +402,9 @@ class Review:
             i_lo = (vs[0] - vf[2] - vl[2]) / rv * 1e3
             i_mid = (vs[1] - vf[1] - vl[1]) / rv * 1e3
             i_hi = (vs[2] - vf[0] - vl[0]) / rv * 1e3
+            hs = nl.two_pin(r, a.net)
+            if hs in self.v:
+                self.load.setdefault(hs, []).append((max(i_hi, 0) / 1e3, f"{ref} LED"))
             msg = (f"{nl.comps[ref]['value']} 經 {r} {nl.comps[r]['value']}:電流 {max(i_lo, 0):.2f} / {i_mid:.2f} / "
                    f"{i_hi:.2f} mA(最壞 / 中間 / 最大;電源 {fmt_v(vs)}、Vf {vf[0]}–{vf[2]}V、低側 {fmt_v(vl)})")
             if i_mid < LED_MIN_MA:
@@ -490,6 +524,11 @@ class Review:
                 self.add("ERROR", "inductive", ref, f"線圈({supply} ↔ {drive})沒有續流路徑:驅動關斷時的反電動勢會打壞驅動器"
                          "(ULN2803 的 COM 接線圈電源,或線圈並聯反向二極體)")
             vs = self.v[supply]
+            coil_r = si_value((self.attrs(ref).get("Coil Resistance") or "").replace("Ω", ""))
+            if coil_r:
+                self.load.setdefault(supply, []).append((vs[2] / coil_r, f"{ref} 線圈"))
+            else:
+                self.add("WARN", "supply-budget", ref, "lcsc-check.json 沒有 Coil Resistance,線圈電流沒算進電源預算")
             worst, typ = vs[0] - vce[2], vs[1] - vce[1]
             need = spec["pickup"] * spec["rated"]
             msg = f"線圈電壓 最壞 {worst:.2f}V / 典型 {typ:.2f}V,吸合要 ≥ {need:.2f}V(電源 {fmt_v(vs)} − 驅動壓降 {fmt_v(vce)})"
@@ -519,6 +558,136 @@ class Review:
                 self.add("ERROR", "cap-voltage", ref, f"跨壓最高 {span:.2f}V > 耐壓 {rating:g}V")
             elif span > 0.8 * rating:
                 self.add("WARN", "cap-voltage", ref, f"跨壓最高 {span:.2f}V > 耐壓 {rating:g}V 的 80%")
+
+
+    # 電流預算 ───────────────────────────────────────────────────────────
+    def passes(self) -> list[tuple[str, str, str, str]]:
+        """電流會「穿過」的元件:(輸入網, 輸出網, 種類, 位號)。種類:diode / pmos / linear。"""
+        nl, out = self.nl, []
+        for ref, c in nl.comps.items():
+            desc = nl.description(ref).lower()
+            k, a = self.cathode(ref), self.anode(ref)
+            if k and a and ("schottky" in desc or "rectifier" in desc) and not self.is_led(ref):
+                out.append((a.net, k.net, "diode", ref))
+            s, d = nl.by_name(ref, "S"), nl.by_name(ref, "D")
+            if s and d and "p-channel" in desc:
+                out.append((s[0].net, d[0].net, "pmos", ref))
+            lin = LINEAR.get(c["lib_id"])
+            if lin:
+                i, o = nl.by_name(ref, lin[0]), nl.by_name(ref, lin[1])
+                if i and o:
+                    out.append((i[0].net, o[0].net, "linear", ref))
+        return out
+
+    def current(self, net, seen=()) -> float:
+        """最壞情況下從 net 拉走的電流:本網負載 + 經二極體 / P-MOS / LDO 往下游的全部。
+        二極體 OR(兩個來源併到同一網)時,每個來源都假設要供全部(另一個沒接的情況)。"""
+        if net in self._i:
+            return self._i[net]
+        if net in seen:
+            return 0.0
+        i = sum(a for a, _ in self.load.get(net, []))
+        i += sum(self.current(o, seen + (net,)) for n, o, _, _ in self.passes() if n == net and o != net)
+        self._i[net] = i
+        return i
+
+    def budget(self):
+        nl = self.nl
+        for ref, c in nl.comps.items():
+            for name, (a, src) in LOADS.get(c["lib_id"], {}).items():
+                for p in nl.by_name(ref, name):
+                    self.load.setdefault(p.net, []).append((a, f"{ref} {nl.comps[ref]['value']}"))
+        self._i = {}
+        rated: dict[str, tuple] = {}
+        for ref, c in nl.comps.items():
+            for name, (rating, src) in SOURCE_RATING.get(c["lib_id"], {}).items():
+                for p in nl.by_name(ref, name)[:1]:
+                    rated[p.net] = (rating, ref, src)
+                    i = self.current(p.net)
+                    direct = ", ".join(f"{d} {x * 1e3:.0f}mA" for x, d in self.load.get(p.net, []))
+                    msg = (f"{name}({p.net})最壞拉 {i * 1e3:.0f}mA / 額定 {rating * 1e3:.0f}mA({src})"
+                           + (f";本網負載:{direct}" if direct else ""))
+                    self.add("ERROR" if i > rating else "WARN" if i > 0.9 * rating else "OK",
+                             "supply-budget", ref, msg)
+        for ref, c in nl.comps.items():
+            for name, (need, src) in NEEDS_SOURCE.get(c["lib_id"], {}).items():
+                for p in nl.by_name(ref, name)[:1]:
+                    r = rated.get(p.net)
+                    if r is None:
+                        self.add("WARN", "supply-budget", ref, f"{name}({p.net})找不到已知額定的供電元件,無法確認 {src}")
+                    elif r[0] < need:
+                        self.add("ERROR", "supply-budget", ref,
+                                 f"{name} 由 {r[1]} 供電,額定 {r[0] * 1e3:.0f}mA < 要求 {need * 1e3:.0f}mA({src})")
+
+    def thermal(self):
+        nl = self.nl
+        for ref, c in nl.comps.items():
+            lin = LINEAR.get(c["lib_id"])
+            if not lin:
+                continue
+            pin_in, pin_out, theta, tjmax, src = lin
+            ni, no = nl.by_name(ref, pin_in)[0].net, nl.by_name(ref, pin_out)[0].net
+            vi, vo = self.v.get(ni), self.v.get(no)
+            if not vi or not vo:
+                self.add("WARN", "ldo-thermal", ref, f"{ni} / {no} 的電壓推算不出來,算不了耗散")
+                continue
+            i = self.current(no)
+            p = (vi[2] - vo[0]) * i
+            tj = TA + p * theta
+            msg = (f"耗散最壞 ({vi[2]:.2f} − {vo[0]:.2f})V × {i * 1e3:.0f}mA = {p:.2f}W → Tj = {TA:g} + {p:.2f} × {theta:g}"
+                   f" = {tj:.0f}°C(上限 {tjmax:g}°C;{src})")
+            self.add("ERROR" if tj > tjmax else "WARN" if tj > tjmax - 15 else "OK", "ldo-thermal", ref, msg)
+
+    def softstart(self, ref, s_net) -> bool:
+        """P-MOS 的閘極有電容接到源極 = RC 軟啟動,插入時先關著。"""
+        g = self.nl.by_name(ref, "G")
+        return bool(g) and bool(self.nl.parts_between(g[0].net, s_net, "C"))
+
+    def vbus_cap(self):
+        nl = self.nl
+        for ref, c in nl.comps.items():
+            if not c["lib_id"].startswith("Connector:USB_C"):
+                continue
+            vbus = nl.by_name(ref, "VBUS")
+            if not vbus:
+                continue
+            start = vbus[0].net
+            direct, behind, stop = {start}, set(), []
+            todo = [(start, "direct")]
+            ps = self.passes()
+            while todo:
+                net, kind = todo.pop()
+                for n, o, k, r in ps:
+                    if n != net:
+                        continue
+                    if k == "pmos" and self.softstart(r, n):
+                        stop.append(r)
+                        continue
+                    nk = "behind" if (kind == "behind" or k == "linear") else "direct"
+                    tgt = behind if nk == "behind" else direct
+                    if o not in direct | behind:
+                        tgt.add(o)
+                        todo.append((o, nk))
+
+            def total(nets):
+                caps = [(r, x) for n in sorted(nets) for r, x in self.caps_to_gnd(n)]
+                mods = [(r, MODULE_CAP[nl.lib(r)][0]) for r in nl.comps if nl.lib(r) in MODULE_CAP
+                        and any(p.net in nets for p in nl.pins[r].values() if p.type == "power_in")]
+                return caps + mods
+
+            d, b = total(direct), total(behind)
+            sd, sb = sum(x for _, x in d), sum(x for _, x in b)
+            names = lambda xs: ", ".join(f"{r} {x * 1e6:g}µF" for r, x in xs) or "無"  # noqa: E731
+            tail = f"(軟啟動 {', '.join(stop)} 之後的不算)" if stop else ""
+            if sd > USB_VBUS_CAP:
+                self.add("ERROR", "vbus-cap", ref, f"VBUS 上直接(含經二極體)的電容 {sd * 1e6:.1f}µF > 10µF"
+                         f"(USB 2.0 §7.2.4.1):{names(d)}{tail}")
+            elif sd + sb > USB_VBUS_CAP:
+                self.add("ERROR", "vbus-cap", ref,
+                         f"VBUS 直接 {sd * 1e6:.1f}µF + LDO 後面 {sb * 1e6:.1f}µF = {(sd + sb) * 1e6:.1f}µF > 10µF,而且中間沒有軟啟動:"
+                         f"插入時 LDO 用限流對後端電容充電,注入電荷可能超過 USB 2.0 的 50µC(直接:{names(d)};LDO 後:{names(b)})")
+            else:
+                self.add("OK", "vbus-cap", ref, f"VBUS 直接 {sd * 1e6:.1f}µF + LDO 後面 {sb * 1e6:.1f}µF ≤ 10µF{tail}")
 
 
 def merge(rs):
