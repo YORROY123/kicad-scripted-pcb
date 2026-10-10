@@ -1,0 +1,119 @@
+{
+ "lcsc_json_sha256": "d386cdf5b78eb1e4",
+ "checked": "2026-10-10",
+ "boards": 5,
+ "parts": {
+  "100nF|Capacitor_SMD:C_0402_1005Metric": {
+   "lcsc": "C1525",
+   "model": "CL05B104KO5NNNC",
+   "package": "0402",
+   "brand": "Samsung Electro-Mechanics",
+   "library": "base",
+   "stock": 24127635,
+   "price": 0.0045,
+   "manual": [],
+   "errors": []
+  },
+  "4.7uF|Capacitor_SMD:C_0805_2012Metric": {
+   "lcsc": "C1779",
+   "model": "CL21A475KAQNNNE",
+   "package": "0805",
+   "brand": "Samsung Electro-Mechanics",
+   "library": "base",
+   "stock": 2637099,
+   "price": 0.0346,
+   "manual": [],
+   "errors": []
+  },
+  "SS34|Diode_SMD:D_SMA": {
+   "lcsc": "C8678",
+   "model": "SS34",
+   "package": "SMA(DO-214AC)",
+   "brand": "MDD(Microdiode Semiconductor)",
+   "library": "base",
+   "stock": 4166817,
+   "price": 0.0349,
+   "manual": [],
+   "errors": []
+  },
+  "USBLC6-2SC6|Package_TO_SOT_SMD:SOT-23-6": {
+   "lcsc": "C7519",
+   "model": "USBLC6-2SC6",
+   "package": "SOT-23-6L",
+   "brand": "STMicroelectronics",
+   "library": "expand",
+   "stock": 39784,
+   "price": 0.177,
+   "manual": [],
+   "errors": []
+  },
+  "SMAJ5.0A|Diode_SMD:D_SMA": {
+   "lcsc": "C83329",
+   "model": "SMAJ5.0A",
+   "package": "DO-214AC(SMA)",
+   "brand": "Littelfuse",
+   "library": "expand",
+   "stock": 29987,
+   "price": 0.1237,
+   "manual": [],
+   "errors": []
+  },
+  "USB-C|Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12": {
+   "lcsc": "C165948",
+   "model": "TYPE-C-31-M-12",
+   "package": "SMD",
+   "brand": "Korean Hroparts Elec",
+   "library": "expand",
+   "stock": 409148,
+   "price": 0.186,
+   "manual": [
+    "封裝 JLC 寫「SMD」,KiCad 用 USB_C_Receptacle_HRO_TYPE-C-31-M-12,對不對要人看規格書"
+   ],
+   "errors": []
+  },
+  "KT-0805Y|LED_SMD:LED_0805_2012Metric": {
+   "lcsc": "C2296",
+   "model": "KT-0805Y",
+   "package": "0805",
+   "brand": "Hubei KENTO Elec",
+   "library": "base",
+   "stock": 322832,
+   "price": 0.0153,
+   "manual": [],
+   "errors": []
+  },
+  "5.1k|Resistor_SMD:R_0402_1005Metric": {
+   "lcsc": "C25905",
+   "model": "0402WGF5101TCE",
+   "package": "0402",
+   "brand": "UNI-ROYAL(Uniroyal Elec)",
+   "library": "base",
+   "stock": 5623714,
+   "price": 0.0024,
+   "manual": [],
+   "errors": []
+  },
+  "1k|Resistor_SMD:R_0402_1005Metric": {
+   "lcsc": "C11702",
+   "model": "0402WGF1001TCE",
+   "package": "0402",
+   "brand": "UNI-ROYAL(Uniroyal Elec)",
+   "library": "base",
+   "stock": 8316707,
+   "price": 0.0035,
+   "manual": [],
+   "errors": []
+  },
+  "LP38693MP-3.3|Package_TO_SOT_SMD:SOT-223-5": {
+   "lcsc": "C130904",
+   "model": "LP38693MP-3.3/NOPB",
+   "package": "SOT-223-5",
+   "brand": "Texas Instruments",
+   "library": "expand",
+   "stock": 296,
+   "price": 1.702,
+   "manual": [],
+   "errors": []
+  }
+ }
+}

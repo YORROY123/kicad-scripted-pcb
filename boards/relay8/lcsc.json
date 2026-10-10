@@ -1,0 +1,146 @@
+{
+ "1uF|Capacitor_SMD:C_0402_1005Metric": {
+  "lcsc": "C52923",
+  "model": "CL05A105KA5NQNC"
+ },
+ "10uF|Capacitor_SMD:C_0805_2012Metric": {
+  "lcsc": "C15850",
+  "model": "CL21A106KAYNNNE"
+ },
+ "100nF|Capacitor_SMD:C_0402_1005Metric": {
+  "lcsc": "C1525",
+  "model": "CL05B104KO5NNNC"
+ },
+ "100uF|Capacitor_SMD:CP_Elec_6.3x7.7": {
+  "lcsc": "C72476",
+  "model": "RVT1C101M0607",
+  "note": "100µF 16V 電解,5V 軌"
+ },
+ "USBLC6-2SC6|Package_TO_SOT_SMD:SOT-23-6": {
+  "lcsc": "C7519",
+  "model": "USBLC6-2SC6"
+ },
+ "GREEN|LED_SMD:LED_0805_2012Metric": {
+  "lcsc": "C2297",
+  "model": "KT-0805G"
+ },
+ "SS34|Diode_SMD:D_SMA": {
+  "lcsc": "C8678",
+  "model": "SS34"
+ },
+ "RED|LED_SMD:LED_0805_2012Metric": {
+  "lcsc": "C84256",
+  "model": "NCD0805R1"
+ },
+ "T8A 250V|Fuse:Fuseholder_Clip-5x20mm_Keystone_3517_Inline_P23.11x6.76mm_D1.70mm_Horizontal": {
+  "assemble": false,
+  "reason": "Keystone 3517 保險絲夾 LCSC 庫存 0",
+  "buy": "Keystone 3517 ×2 + 5×20mm T8A 250V 保險絲"
+ },
+ "T1A 250V|Fuse:Fuseholder_TR5_Littelfuse_No560_No460": {
+  "assemble": false,
+  "reason": "Littelfuse 560 座 LCSC 查無",
+  "buy": "Littelfuse 560 TR5 座 + TR5 T1A 250V 保險絲"
+ },
+ "USB-C|Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12": {
+  "lcsc": "C165948",
+  "model": "TYPE-C-31-M-12",
+  "note": "KiCad 封裝就是 HRO TYPE-C-31-M-12"
+ },
+ "UART|Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical": {
+  "lcsc": "C492403",
+  "model": "PZ254V-11-04P",
+  "note": "1×4 2.54mm 直插排針"
+ },
+ "CH1|TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13703HBWC_1x03_P7.50mm_Horizontal": {
+  "assemble": false,
+  "reason": "LCSC 查無 MetzConnect RT13703HBWC",
+  "buy": "MetzConnect RT13703HBWC(7.5mm 3P)"
+ },
+ "CH2|TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13703HBWC_1x03_P7.50mm_Horizontal": {
+  "assemble": false,
+  "reason": "LCSC 查無 MetzConnect RT13703HBWC",
+  "buy": "MetzConnect RT13703HBWC(7.5mm 3P)"
+ },
+ "CH3|TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13703HBWC_1x03_P7.50mm_Horizontal": {
+  "assemble": false,
+  "reason": "LCSC 查無 MetzConnect RT13703HBWC",
+  "buy": "MetzConnect RT13703HBWC(7.5mm 3P)"
+ },
+ "CH4|TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13703HBWC_1x03_P7.50mm_Horizontal": {
+  "assemble": false,
+  "reason": "LCSC 查無 MetzConnect RT13703HBWC",
+  "buy": "MetzConnect RT13703HBWC(7.5mm 3P)"
+ },
+ "CH5|TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13703HBWC_1x03_P7.50mm_Horizontal": {
+  "assemble": false,
+  "reason": "LCSC 查無 MetzConnect RT13703HBWC",
+  "buy": "MetzConnect RT13703HBWC(7.5mm 3P)"
+ },
+ "CH6|TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13703HBWC_1x03_P7.50mm_Horizontal": {
+  "assemble": false,
+  "reason": "LCSC 查無 MetzConnect RT13703HBWC",
+  "buy": "MetzConnect RT13703HBWC(7.5mm 3P)"
+ },
+ "CH7|TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13703HBWC_1x03_P7.50mm_Horizontal": {
+  "assemble": false,
+  "reason": "LCSC 查無 MetzConnect RT13703HBWC",
+  "buy": "MetzConnect RT13703HBWC(7.5mm 3P)"
+ },
+ "CH8|TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13703HBWC_1x03_P7.50mm_Horizontal": {
+  "assemble": false,
+  "reason": "LCSC 查無 MetzConnect RT13703HBWC",
+  "buy": "MetzConnect RT13703HBWC(7.5mm 3P)"
+ },
+ "MAINS IN|TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type171_RT13702HBWC_1x02_P7.50mm_Horizontal": {
+  "assemble": false,
+  "reason": "LCSC 查無 MetzConnect RT13702HBWC",
+  "buy": "MetzConnect RT13702HBWC(7.5mm 2P)"
+ },
+ "SRD-05VDC-SL-C|Relay_THT:Relay_SPDT_SANYOU_SRD_Series_Form_C": {
+  "lcsc": "C35449",
+  "model": "SRD-05VDC-SL-C"
+ },
+ "HLK-10M05|Converter_ACDC:Converter_ACDC_Hi-Link_HLK-10Mxx": {
+  "lcsc": "C403745",
+  "model": "HLK-10M05"
+ },
+ "5.1k|Resistor_SMD:R_0402_1005Metric": {
+  "lcsc": "C25905",
+  "model": "0402WGF5101TCE"
+ },
+ "10k|Resistor_SMD:R_0402_1005Metric": {
+  "lcsc": "C25744",
+  "model": "0402WGF1002TCE"
+ },
+ "1k|Resistor_SMD:R_0402_1005Metric": {
+  "lcsc": "C11702",
+  "model": "0402WGF1001TCE"
+ },
+ "14D431K|Varistor:RV_Disc_D15.5mm_W4.4mm_P7.5mm": {
+  "lcsc": "C137830",
+  "model": "14D431K"
+ },
+ "RESET|Button_Switch_SMD:SW_Push_1P1T_NO_CK_KMR2": {
+  "lcsc": "C72443",
+  "model": "KMR221GLFS",
+  "note": "C&K KMR2 系列,與 KiCad 封裝同系列"
+ },
+ "BOOT|Button_Switch_SMD:SW_Push_1P1T_NO_CK_KMR2": {
+  "lcsc": "C72443",
+  "model": "KMR221GLFS",
+  "note": "C&K KMR2 系列,與 KiCad 封裝同系列"
+ },
+ "ESP32-C3-WROOM-02-N4|RF_Module:ESP32-C3-WROOM-02": {
+  "lcsc": "C2934560",
+  "model": "ESP32-C3-WROOM-02-N4"
+ },
+ "LP38693MP-3.3|Package_TO_SOT_SMD:SOT-223-5": {
+  "lcsc": "C130904",
+  "model": "LP38693MP-3.3"
+ },
+ "ULN2803A|Package_SO:SOIC-18W_7.5x11.6mm_P1.27mm": {
+  "lcsc": "C9683",
+  "model": "ULN2803ADWR"
+ }
+}

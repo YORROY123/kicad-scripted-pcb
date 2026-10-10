@@ -1,0 +1,9 @@
+{
+ "_說明": "KiCad 封裝名(不含庫名)→ CPL 角度要加的修正。依序比對,第一條符合的生效。status 以「已確認」開頭才算驗證過;目前沒有一條是,上傳 JLC 後要在貼片預覽逐顆看。來源:matthewlai/JLCKicadTools 的 cpl_rotations_db.csv(社群整理),本專案未以實物驗證。",
+ "rules": [
+  {"pattern": "^SOT-223", "rotation": 180, "status": "未確認:社群修正表(JLCKicadTools)"},
+  {"pattern": "^SOT-23", "rotation": 180, "status": "未確認:社群修正表(JLCKicadTools),含 SOT-23-6"},
+  {"pattern": "^CP_Elec_", "rotation": 180, "status": "未確認:社群修正表(JLCKicadTools)"},
+  {"pattern": "^LED_0805_", "rotation": 0, "status": "未確認:比對過立創 C2296 的封裝資料,陽極同在 +x 側,0° 一致;其他料號沒比對"}
+ ]
+}

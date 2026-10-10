@@ -1,0 +1,78 @@
+{
+ "1uF|Capacitor_SMD:C_0402_1005Metric": {
+  "lcsc": "C52923",
+  "model": "CL05A105KA5NQNC"
+ },
+ "10uF|Capacitor_SMD:C_0805_2012Metric": {
+  "lcsc": "C15850",
+  "model": "CL21A106KAYNNNE"
+ },
+ "100nF|Capacitor_SMD:C_0402_1005Metric": {
+  "lcsc": "C1525",
+  "model": "CL05B104KO5NNNC"
+ },
+ "10nF|Capacitor_SMD:C_0402_1005Metric": {
+  "lcsc": "C15195",
+  "model": "CL05B103KB5NNNC"
+ },
+ "USBLC6-2SC6|Package_TO_SOT_SMD:SOT-23-6": {
+  "lcsc": "C7519",
+  "model": "USBLC6-2SC6"
+ },
+ "BLUE|LED_SMD:LED_0805_2012Metric": {
+  "lcsc": "C84259",
+  "model": "NCD0805B2"
+ },
+ "GREEN|LED_SMD:LED_0805_2012Metric": {
+  "lcsc": "C2297",
+  "model": "KT-0805G"
+ },
+ "USB-C|Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12": {
+  "lcsc": "C165948",
+  "model": "TYPE-C-31-M-12",
+  "note": "KiCad 封裝就是 HRO TYPE-C-31-M-12"
+ },
+ "IO|Connector_PinHeader_2.54mm:PinHeader_1x08_P2.54mm_Vertical": {
+  "lcsc": "C492407",
+  "model": "PZ254V-11-08P",
+  "note": "1×8 2.54mm 直插排針"
+ },
+ "AO3401A|Package_TO_SOT_SMD:SOT-23": {
+  "lcsc": "C15127",
+  "model": "AO3401A"
+ },
+ "5.1k|Resistor_SMD:R_0402_1005Metric": {
+  "lcsc": "C25905",
+  "model": "0402WGF5101TCE"
+ },
+ "10k|Resistor_SMD:R_0402_1005Metric": {
+  "lcsc": "C25744",
+  "model": "0402WGF1002TCE"
+ },
+ "1k|Resistor_SMD:R_0402_1005Metric": {
+  "lcsc": "C11702",
+  "model": "0402WGF1001TCE"
+ },
+ "100k|Resistor_SMD:R_0402_1005Metric": {
+  "lcsc": "C25741",
+  "model": "0402WGF1003TCE"
+ },
+ "RESET|Button_Switch_SMD:SW_Push_1P1T_NO_CK_KMR2": {
+  "lcsc": "C72443",
+  "model": "KMR221GLFS",
+  "note": "C&K KMR2 系列,與 KiCad 封裝同系列"
+ },
+ "BOOT|Button_Switch_SMD:SW_Push_1P1T_NO_CK_KMR2": {
+  "lcsc": "C72443",
+  "model": "KMR221GLFS",
+  "note": "C&K KMR2 系列,與 KiCad 封裝同系列"
+ },
+ "ESP32-C3-WROOM-02-N4|RF_Module:ESP32-C3-WROOM-02": {
+  "lcsc": "C2934560",
+  "model": "ESP32-C3-WROOM-02-N4"
+ },
+ "LP38693MP-3.3|Package_TO_SOT_SMD:SOT-223-5": {
+  "lcsc": "C130904",
+  "model": "LP38693MP-3.3"
+ }
+}
