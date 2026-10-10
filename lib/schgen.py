@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import math
+import random
 import uuid as _uuid
 from dataclasses import dataclass, field
 
@@ -15,8 +16,13 @@ import ksym
 SHEET = {"A4": (297.0, 210.0), "A3": (420.0, 297.0)}
 
 
+# 固定种子:同一份 board.py 每次生成逐字节相同的 .kicad_sch(git diff 只剩真改动)。
+# 生成顺序由 board.py 决定，所以同一电路的 UUID 序列也固定。
+_rng = random.Random(20261010)
+
+
 def uid() -> str:
-    return str(_uuid.uuid4())
+    return str(_uuid.UUID(int=_rng.getrandbits(128), version=4))
 
 
 @dataclass
