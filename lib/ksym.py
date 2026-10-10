@@ -11,6 +11,9 @@ from kicad_paths import kicad_share
 
 SYMBOL_DIR = kicad_share() / "symbols"
 
+# 板子自己的符號庫(KiCad 沒有的器件,例如 CM5)。先找這裡,找不到才用安裝目錄的庫。
+EXTRA_DIRS: list = []
+
 
 def _block_at(text: str, start: int) -> str:
     """从 start 处的 '(' 起，按括号配对返回完整的一段 S-expression。
@@ -45,7 +48,8 @@ def _block_at(text: str, start: int) -> str:
 
 def _raw(lib: str, name: str) -> str:
     """库文件里那一段原样的 (symbol "name" ...)。"""
-    path = SYMBOL_DIR / f"{lib}.kicad_sym"
+    path = next((d / f"{lib}.kicad_sym" for d in EXTRA_DIRS if (d / f"{lib}.kicad_sym").exists()),
+                SYMBOL_DIR / f"{lib}.kicad_sym")
     text = path.read_text(encoding="utf-8")
     m = re.search(r'^\t\(symbol "' + re.escape(name) + r'"', text, re.M)
     if not m:
