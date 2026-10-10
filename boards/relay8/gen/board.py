@@ -12,7 +12,7 @@
   - 总电流上限 8A(F1);每路额定 5A
 低压:
   - 5V_PS:PS1 输出直接供 8 个线圈(全吸合约 8 × 72mA ≈ 0.6A)+ 100µF
-  - 5V_SYS:5V_PS 与 USB VBUS 各经一颗 SS34 并联 → LP38693MP-3.3 → +3V3
+  - 5V_SYS:5V_PS 与 USB VBUS(经 Q1 软启动)各经一颗 SS34 并联 → LP38693MP-3.3 → +3V3
       只插 USB(没接市电):MCU 能烧录、能跑,但线圈没电,继电器不动作
       二极管同时防止 5V 倒灌进电脑的 USB 口
 驱动:ULN2803A(达林顿阵列,内建续流二极管 COM 接线圈电源;输入内建下拉,开机不乱跳)
@@ -83,7 +83,20 @@ add("C5", "Device", "C_Polarized", 120, 190, "100uF", "Capacitor_SMD:CP_Elec_6.3
     {"1": "5V_PS", "2": "GND"})
 # SS34:1 = K、2 = A
 add("D4", "Diode", "SS34", 60, 118, "SS34", "Diode_SMD:D_SMA", {"2": "5V_PS", "1": "5V_SYS"})
-add("D5", "Diode", "SS34", 60, 135, "SS34", "Diode_SMD:D_SMA", {"2": "VBUS", "1": "5V_SYS"})
+add("D5", "Diode", "SS34", 60, 135, "SS34", "Diode_SMD:D_SMA", {"2": "VSW", "1": "5V_SYS"})
+
+# ── VBUS 軟啟動(sim/softstart_sim.py)───────────────────────────────────
+# 只插 USB 時 VBUS 經 D5 給 LDO,後面有 C2 10µF + 模組內部約 12.3µF,直接接會超過 USB 2.0 的
+# 50µC(lib/review.py vbus-cap)。與 esp32c3 同一組:P-MOSFET 串在 VBUS 與 D5 之間,
+#   C6 插入瞬間把閘極綁在源極(先關著),R9 慢慢拉低,C7(閘-汲)讓輸出等斜率爬升。
+#   模擬:爬升段 80–97mA(Vth −0.5…−1.3V)、200µs 內 5µC、3V3 1.4–3.9ms 就緒。
+# AO3401A(AOS Rev 3.1):VDS −30V、VGS ±12V。接市電時 D5 反偏,本體二極體也被它擋住,不倒灌 USB。
+add("Q1", "Transistor_FET", "AO3401A", 30, 150, "AO3401A",
+    "Package_TO_SOT_SMD:SOT-23", {"1": "SS_G", "2": "VBUS", "3": "VSW"})
+add("R9", "Device", "R", 44, 150, "100k", R0402, {"1": "SS_G", "2": "GND"})
+add("C6", "Device", "C", 52, 150, "100nF", C0402, {"1": "SS_G", "2": "VBUS"})
+add("C7", "Device", "C", 60, 150, "10nF", C0402, {"1": "SS_G", "2": "VSW"})
+add("C8", "Device", "C", 68, 150, "1uF", C0402, {"1": "VBUS", "2": "GND"})
 # 5V_SYS 只经二极管(passive)进来,ERC 会判「电源输入未被驱动」;这里确实是电源入口
 flag("5V_SYS", 72, 112)
 

@@ -146,5 +146,17 @@
  "220|Resistor_SMD:R_0402_1005Metric": {
   "lcsc": "C25091",
   "model": "0402WGF2200TCE"
+ },
+ "10nF|Capacitor_SMD:C_0402_1005Metric": {
+  "lcsc": "C15195",
+  "model": "CL05B103KB5NNNC"
+ },
+ "AO3401A|Package_TO_SOT_SMD:SOT-23": {
+  "lcsc": "C15127",
+  "model": "AO3401A"
+ },
+ "100k|Resistor_SMD:R_0402_1005Metric": {
+  "lcsc": "C25741",
+  "model": "0402WGF1003TCE"
  }
 }

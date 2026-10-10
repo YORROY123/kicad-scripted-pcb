@@ -6,7 +6,6 @@ WARN  inductive       K5    線圈電壓 最壞 3.70V / 典型 4.10V,吸合要 �
 WARN  inductive       K6    線圈電壓 最壞 3.70V / 典型 4.10V,吸合要 ≥ 3.75V(電源 4.80–5.20V − 驅動壓降 0.70–1.10V) → 最壞組合可能吸不住
 WARN  inductive       K7    線圈電壓 最壞 3.70V / 典型 4.10V,吸合要 ≥ 3.75V(電源 4.80–5.20V − 驅動壓降 0.70–1.10V) → 最壞組合可能吸不住
 WARN  inductive       K8    線圈電壓 最壞 3.70V / 典型 4.10V,吸合要 ≥ 3.75V(電源 4.80–5.20V − 驅動壓降 0.70–1.10V) → 最壞組合可能吸不住
-INFO  vbus-cap        J1    VBUS 直接 1.0µF + LDO 後面 22.4µF = 23.4µF > 10µF,而且中間沒有軟啟動:插入時 LDO 用限流對後端電容充電,注入電荷可能超過 USB 2.0 的 50µC(直接:C1 1µF;LDO 後:C2 10µF, C3 0.1µF, U1 12.3µF)  [豁免:未修(待辦):USB 只用來燒錄,平常由 HLK-10M05 供電;但插 USB 時仍會超過 USB 2.0 的 50µC。修法是照 esp32c3 在 VBUS 加 AO3401A 軟啟動。FIRMWARE.md 已註明]
 OK    decoupling      U1    3V3(+3V3,3.23–3.37V)對地 10.10µF:C2 10uF, C3 100nF
 OK    decoupling      U2    IN(5V_SYS,3.90–4.95V)對地 1.00µF:C1 1uF
 OK    esp32c3-en      U1    EN RC = R3 10k × C4 1uF = 10.0 ms(Espressif 建議 10k × 1µF = 10 ms)
@@ -27,5 +26,6 @@ OK    supply-budget   PS1   +Vout(5V_PS)最壞拉 966mA / 額定 2000mA(Hi-Link 
 OK    supply-budget   U2    OUT(+3V3)最壞拉 348mA / 額定 500mA(LP38693 規格書 SNVS321O:500mA);本網負載:D3 LED 3mA, U1 ESP32-C3-WROOM-02-N4 345mA
 OK    usb-c-sink      J1    CC1 → R1 5.1k 對地
 OK    usb-c-sink      J1    CC2 → R2 5.1k 對地
-設計審查:ERROR 0、WARN 8、INFO 1、OK 20
-推算出的網電壓:+3V3 3.23–3.37V、5V_PS 4.80–5.20V、5V_SYS 3.90–4.95V、GND 0.00V、VBUS 4.40–5.25V
+OK    vbus-cap        J1    VBUS 直接 1.0µF + LDO 後面 0.0µF ≤ 10µF(軟啟動 Q1 之後的不算)
+設計審查:ERROR 0、WARN 8、INFO 0、OK 21
+推算出的網電壓:+3V3 3.23–3.37V、5V_PS 4.80–5.20V、5V_SYS 3.90–4.95V、GND 0.00V、VBUS 4.40–5.25V、VSW 4.40–5.25V

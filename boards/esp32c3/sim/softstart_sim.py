@@ -54,8 +54,13 @@ Bgnd vsw 0 I = 55u * min(1, max(0, V(vsw)))
 
 
 def softstart(r: float, l: float, rg: str, cgs: str, cgd: str, vto: float = -0.9,
-              rload: str = "1meg") -> str:
+              rload: str = "1meg", diode: bool = False) -> str:
+    """diode=True:relay8 的接法,MOSFET 汲極 → SS34 → LDO 輸入(1µF),汲極本身沒有電容。"""
     # 負載預設不接:插入瞬間模組還沒開機(與 power_sim.py 相同理由)
+    if diode:
+        ldo_in = "D5 vsw vin SS34\nC5 vin 0 1u\n" + LDO.replace("vsw", "vin")
+    else:
+        ldo_in = f"C5 vsw 0 1u\n{LDO}"
     return f"""soft-start
 Vbus vsrc 0 PWL(0 0 1u 5 100m 5)
 Lcable vsrc vl {l}
@@ -68,8 +73,7 @@ Cgdi g vsw 55p
 Cgs g vbus {cgs}
 Cgd g vsw {cgd}
 Rg g 0 {rg}
-C5 vsw 0 1u
-{LDO}
+{ldo_in}
 C2 v33 0 10u
 C3 v33 0 100n
 Cmod v33 0 12.3u
