@@ -40,16 +40,30 @@
 
 ## 需求與快速開始
 
-需要 Windows、[KiCad 10](https://www.kicad.org/)、Python 3.10 以上;模擬另外需要 numpy 和 matplotlib。freerouting 和 Java 25 由下載腳本抓取,會核對 SHA-256,只放在 `tools\`,不安裝到系統。
+需要 Windows、[KiCad 10](https://www.kicad.org/)、Python 3.10 以上(原理圖產生與設計審查只用標準函式庫);模擬與場解器另外需要 numpy、scipy、matplotlib。freerouting 和 Java 25 由下載腳本抓取,會核對 SHA-256,只放在 `tools\`,不安裝到系統。只有 `lib/lcsc.py`(查 JLCPCB 零件庫)要連網,建置本身不連網。
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\setup-tools.ps1
 powershell -ExecutionPolicy Bypass -File boards\esp32c3\build.ps1
+python lib\review_test.py          # 設計審查的突變測試;要先 build 過一次
 ```
+
+建置的流程:原理圖 → ERC → 網表比對 → **設計審查** → 擺件 → freerouting → 鋪銅 → DRC → 製造檔。任何一步不過就停,不帶錯往下走。最後產出在 `boards/<板>/fab/`:
+
+| 檔案 | 用途 |
+|---|---|
+| `<板>-gerber.zip` | 上傳 JLCPCB 做空板 |
+| `<板>-bom.csv`、`<板>-cpl.csv` | 上傳做 SMT 貼片(LCSC 買得到的件) |
+| `hand-solder.csv` | LCSC 買不到、要自購手焊的件(relay8 的市電端子、保險絲座) |
+| `rotation-review.csv` | 每顆件的 CPL 角度與依據。**都沒有實物驗證**,要在 JLCPCB 貼片預覽逐顆對照 |
+
+`boards/<板>/review.txt` 是設計審查報告(含推算出的各網電壓),`lcsc-check.json` 是對過 JLCPCB 的料號、庫存與屬性。
+
+想加一塊板或一條審查規則?看 [CONTRIBUTING.md](CONTRIBUTING.md)(英文,中文討論也歡迎)。
 
 ## 限制
 
-這幾塊都是雙層板,用模組、電源設計簡單。沒有阻抗控制、等長佈線、BGA,也沒有 SI/PI 分析,freerouting 也不做這些。產出的板子是需要人審查的起點,不是可以直接送廠的設計。**relay8 接市電**,這一點對它尤其重要。
+這幾塊都是雙層板,用模組、電源設計簡單。沒有阻抗控制佈線、等長佈線、BGA,也沒有 SI/PI 分析,freerouting 也不做這些(`lib/field2d.py` 可以告訴你一條線需不需要)。製造檔已經齊全到可以下單,但這些板子還沒有人實際做過:CPL 角度沒驗證,設計審查是一組規則,不是工程師。下單前請人審過。**relay8 接市電**,這一點對它尤其重要。
 
 ## 授權
 

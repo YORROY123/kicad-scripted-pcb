@@ -24,11 +24,21 @@ relay8, the mains wiring.
 ```
 gen/board.py ──► .kicad_sch ──► ERC ──► netlist ──► netlist check (vs expected_nets.json)
                                                      │
+                                                     ▼
+                                     design review (lib/review.py, datasheet rules)
+                                                     │
 gen/pcb.py ◄─────────────────────────────────────────┘   place footprints, board outline,
    │                                                     net classes, placement self-check
    ▼
 .kicad_pcb ──► Specctra DSN ──► freerouting ──► SES ──► import + GND pour ──► DRC (+ schematic parity)
+                                                                                   │
+                     lcsc.json ──► lib/lcsc.py (online, run by hand) ──► lcsc-check.json
+                                                                                   │
+                                                       lib/fab.py ◄────────────────┘
+                                     Gerber + drill zip, JLCPCB BOM / CPL, hand-solder list
 ```
+
+Every step stops the build on failure; nothing is passed downstream with a known error.
 
 `kicad-cli` has no "update PCB from schematic" command, so `lib/pcbgen.py` builds the board from
 the exported netlist with pcbnew.
@@ -61,7 +71,8 @@ the exported netlist with pcbnew.
 
 - Windows (the build scripts are PowerShell; the Python parts are cross-platform)
 - [KiCad 10](https://www.kicad.org/) (uses its bundled Python for pcbnew, and its ngspice). Set `KICAD_BIN` / `KICAD_SHARE` if it is not in the default location.
-- Python 3.10+ on PATH for schematic generation (standard library only). The simulation needs `numpy` and `matplotlib`.
+- Python 3.10+ on PATH for schematic generation and the design review (standard library only). The simulations and the field solver need `numpy`, `scipy` and `matplotlib`.
+- Network access only for `lib/lcsc.py` (JLCPCB parts API). The build itself runs offline.
 - freerouting 2.5.0 jar + a Java 25 runtime. Run `tools\setup-tools.ps1` once; it downloads both into `tools\` with pinned SHA-256 checks.
 
 ## Quick start
@@ -69,26 +80,51 @@ the exported netlist with pcbnew.
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\setup-tools.ps1
 powershell -ExecutionPolicy Bypass -File boards\esp32c3\build.ps1
+python lib\review_test.py          # design-review mutation tests; needs the boards built once
 ```
+
+The build ends with `boards/<b>/fab/`:
+
+| File | Use |
+|---|---|
+| `<b>-gerber.zip` | upload to JLCPCB as the PCB |
+| `<b>-bom.csv`, `<b>-cpl.csv` | upload for SMT assembly (parts LCSC can supply) |
+| `hand-solder.csv` | parts LCSC cannot supply (relay8: mains terminals, fuse holders) |
+| `rotation-review.csv` | every part's CPL rotation and where it came from. None is hardware-verified: compare each part in JLCPCB's placement preview |
+
+Also written to `boards/<b>/`: `review.txt` (design review, including the inferred net voltages) and
+`lcsc-check.json` (part numbers as checked against JLCPCB, with stock and attributes).
 
 ## Layout
 
 ```
-lib/        shared: schematic writer, net-label helper, PCB builder, routing, netlist check
+lib/schgen.py, ksym.py, netlabel.py   schematic writer (symbols flattened from the KiCad library)
+lib/check_netlist.py                  netlist vs expected_nets.json
+lib/review.py, review_test.py         design review rules + mutation tests
+lib/pcbgen.py, route.py               PCB builder (BoardSpec), freerouting round trip, GND pour
+lib/lcsc.py, fab.py, jlc_rotations.json   part-number check, fabrication outputs
+lib/field2d.py, field2d_check.py      2-D field solver for trace impedance + validation
 boards/<b>/gen/board.py   the circuit (pin -> net table)
 boards/<b>/gen/pcb.py     placement (BoardSpec)
+boards/<b>/lcsc.json      hand-written LCSC part numbers ("value|footprint" -> part)
+boards/<b>/review-waivers.json   accepted review findings, each with a reason
 boards/<b>/build.ps1      one-command build
+boards/<b>/sim/           ngspice and field-solver studies
 tools/      setup-tools.ps1 (downloads are git-ignored)
 ```
+
+Want to add a board or a review rule? See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Code comments are in Chinese. The boards were built while comparing AI-assisted workflows in
 KiCad and EasyEDA Pro.
 
 ## Limits
 
-These are two-layer boards with modules and simple power. There is no controlled impedance, no
-length matching, no BGA and no SI/PI analysis; freerouting does none of these. Treat the outputs as
-a starting point that a person reviews, not as fab-ready designs. This applies above all to
+These are two-layer boards with modules and simple power. There is no controlled-impedance routing,
+no length matching, no BGA and no SI/PI analysis; freerouting does none of these (`lib/field2d.py`
+can tell you whether a trace needs it). The fabrication files are complete enough to order, but
+nobody has built these boards yet: CPL rotations are unverified and the design review is a set of
+rules, not an engineer. Have a person review before ordering. This applies above all to
 **relay8**, which switches mains voltage.
 
 ## License
