@@ -25,6 +25,17 @@ FP_DIR = Path(pcbnew.__file__).resolve().parents[3] / "share" / "kicad" / "footp
 if not FP_DIR.is_dir():  # pcbnew.py 在 bin/Lib/site-packages 或 bin 下,两种都试
     FP_DIR = Path(sys.executable).resolve().parents[1] / "share" / "kicad" / "footprints"
 
+# 板子自己的封裝庫(KiCad 沒有的器件,例如 CM5 的 Amphenol 連接器):放 <庫名>.pretty 的目錄。
+# 先找這裡,找不到才用安裝目錄的庫。
+EXTRA_FP_DIRS: list = []
+
+
+def fp_lib_dir(lib: str) -> Path:
+    for d in EXTRA_FP_DIRS:
+        if (Path(d) / f"{lib}.pretty").is_dir():
+            return Path(d) / f"{lib}.pretty"
+    return FP_DIR / f"{lib}.pretty"
+
 
 # ── 最小 S-表达式解析 ────────────────────────────────────────────────────
 def parse_sexpr(text: str):
@@ -175,7 +186,7 @@ def build(spec: BoardSpec, net_path: Path, out: Path) -> None:
 
     for ref, info in sorted(comps.items()):
         lib, name = info["footprint"].split(":")
-        fp = pcbnew.FootprintLoad(str(FP_DIR / f"{lib}.pretty"), name)
+        fp = pcbnew.FootprintLoad(str(fp_lib_dir(lib)), name)
         if fp is None:
             raise SystemExit(f"{ref}: 载入封装失败 {info['footprint']}")
         fp.SetReference(ref)
@@ -200,7 +211,7 @@ def build(spec: BoardSpec, net_path: Path, out: Path) -> None:
         ref = f"H{i}"
         if ref in comps:
             raise SystemExit(f"固定孔位号 {ref} 与原理图器件冲突")
-        fp = pcbnew.FootprintLoad(str(FP_DIR / f"{lib}.pretty"), name)
+        fp = pcbnew.FootprintLoad(str(fp_lib_dir(lib)), name)
         fp.SetReference(ref)
         fp.SetValue(name)
         fp.SetFPID(pcbnew.LIB_ID(lib, name))

@@ -9,8 +9,8 @@ KiCad 10 的 MCU_Module 只到 CM3,CM4/CM5 都沒有,所以自己畫。
 焊盤編號:CM5 的 1–100 腳在第一顆連接器、101–200 在第二顆。符號腳號就是焊盤號
 (1–100),CM5_J2 的焊盤 n = CM5 第 100+n 腳。腳名保留規格書原名,J2 另外在名稱後面
 不加註 —— 要看 CM5 腳號就 +100。
-⚠ 焊盤 1 在連接器哪一端、與 CM5 腳 1 是否同一端,要對照 DF40 與 CM5 機構圖確認,
-  還沒做(見 boards/cm5/README.md 的待查清單)。
+封裝 CM5:Amphenol_10164227-1001A1RLF_2x50_P0.4mm 由 cm5_fp.py 生成:焊盤 n = CM5 腳 n
+(J2 為 100+n),已用 --compare 對官方 CM5 IO Board 封裝逐焊盤確認(200/200)。
 
 用法: python cm5_sym.py [--verify cm5.txt]  → 寫 ../symbols/CM5.kicad_sym
 """
@@ -99,7 +99,7 @@ def symbol(sym: str, first: int, desc: str) -> str:
            "\t\t(duplicate_pin_numbers_are_jumpers no)\n"]
     out.append(prop("Reference", "J", -HALF_W, round(body_h + P, 2), False))
     out.append(prop("Value", sym, 0, round(body_h + P, 2), False))
-    out.append(prop("Footprint", "Connector_Hirose_DF40:Hirose_DF40C-100DS-0.4V_2x50_P0.4mm", 0, 0, True))
+    out.append(prop("Footprint", "CM5:Amphenol_10164227-1001A1RLF_2x50_P0.4mm", 0, 0, True))
     out.append(prop("Datasheet", "https://datasheets.raspberrypi.com/cm5/cm5-datasheet.pdf", 0, 0, True))
     out.append(prop("Description", desc, 0, 0, True))
     out.append(f'\t\t(symbol "{sym}_0_1"\n\t\t\t(rectangle\n\t\t\t\t(start {-HALF_W} {body_h})\n'
