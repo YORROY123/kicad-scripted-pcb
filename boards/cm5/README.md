@@ -30,12 +30,20 @@ Raspberry Pi Compute Module 5(含 eMMC)的通用載板,目標是 JLCPCB 能直�
 - `lib/schgen.py` / `lib/netlabel.py`:旋轉 90° / 270° 的器件,引腳原本算到鏡像位置(KiCad 是畫面逆時針)。
   ERC 抓不到,網表比對才抓到。三塊既有板子沒用到 90° / 270°,重生原理圖內容不變。
 
+- **原理圖區塊 2:5V → TPS568230 → 3.3V / 8A**。照 TI 規格書 ZHCSIY3C 表 3(3.3V、600kHz、1.5µH)
+  與表 1(MODE 330k / 5.1k = Eco-mode 600kHz)。EN 絕對最大 4V,所以 LM5146 的 PGOOD(拉到 5V)
+  經 R18 20k / R19 30k 分壓成 3.0V 才接 EN —— 3.3V 等 5V 穩定才起來。ERC 0、網表 152/152、審查 0 錯誤。
+
 ### 電源區塊待確認
 1. **電感封裝**:目前暫填 `L_Bourns_SRP1050WA`,要依 TDK SPM10065VT 的規格書焊盤圖另做(可用 Pi 轉圖)。
 2. **LM5146 裸露焊盤尺寸**:LCSC 的規格書只有封裝總覽頁,沒有 RGY0020 詳圖;
    KiCad 的 `Texas_RGY_R-PVQFN-N20_EP2.05x3.05mm` 要對 TI 原檔確認(帶 wettable flank 的版本可能不同)。
 3. **補償**:輸出電容改 10V(原設計 6.3V),實際容值較大 → 要模擬(ngspice)確認相位裕度。
 4. **BSC070N10NS5 在 VGS 7.5V 的 RDS(on)**:限流值用估計的 6.5mΩ,要對規格書曲線。
+6. **TPS568230 封裝**:KiCad 內建 `Texas_RJE0020A`(EP 0.675 × 0.76mm,多塊散熱焊盤)要對 TI 原始 RJE 圖面;
+   JLC 標 VQFN-20-EP(3x3)。
+7. **review.py 不知道兩顆穩壓器的輸出電壓**(可調式,由 FB 分壓決定)→ 之後接 CM5、LAN7800 時
+   rail-range 檢查不到。要在 review.py 加「可調穩壓器:VREF × (1 + 上/下)」的推算。
 5. **反接保護**:目前是 TVS + 保險絲撬棍式,電源短路電流大時 TVS 要撐到保險絲斷;考慮改理想二極體。
 
 ## 已查清(2026-10-12)
