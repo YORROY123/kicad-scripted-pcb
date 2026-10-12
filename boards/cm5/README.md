@@ -23,6 +23,21 @@ Raspberry Pi Compute Module 5(含 eMMC)的通用載板,目標是 JLCPCB 能直�
   兩顆照 `MODULE` 擺在空板上、每個焊盤不同網路,DRC 0。
 - `lib/pcbgen.py` 加 `EXTRA_FP_DIRS`:板子自己的封裝庫,先找這裡。
 
+- **原理圖區塊 1:54V 輸入 → LM5146 → 5V / 12A**(`gen/board.py`,設計推導寫在檔頭)。
+  照 TI 規格書 Design 1(48V → 5V / 12A、300kHz)改:UVLO 開 40.1V / 關 36.1V、MOSFET 換 JLC 有庫存的
+  Infineon BSC160N10NS3G(高側)/ BSC070N10NS5(低側)、限流 R13 依新 MOSFET 重算。
+  LM5146 符號由 `gen/parts_sym.py` 生成(腳位照規格書表 6-1)。`build.ps1`:ERC 0、網表比對 97/97、設計審查 0 錯誤。
+- `lib/schgen.py` / `lib/netlabel.py`:旋轉 90° / 270° 的器件,引腳原本算到鏡像位置(KiCad 是畫面逆時針)。
+  ERC 抓不到,網表比對才抓到。三塊既有板子沒用到 90° / 270°,重生原理圖內容不變。
+
+### 電源區塊待確認
+1. **電感封裝**:目前暫填 `L_Bourns_SRP1050WA`,要依 TDK SPM10065VT 的規格書焊盤圖另做(可用 Pi 轉圖)。
+2. **LM5146 裸露焊盤尺寸**:LCSC 的規格書只有封裝總覽頁,沒有 RGY0020 詳圖;
+   KiCad 的 `Texas_RGY_R-PVQFN-N20_EP2.05x3.05mm` 要對 TI 原檔確認(帶 wettable flank 的版本可能不同)。
+3. **補償**:輸出電容改 10V(原設計 6.3V),實際容值較大 → 要模擬(ngspice)確認相位裕度。
+4. **BSC070N10NS5 在 VGS 7.5V 的 RDS(on)**:限流值用估計的 6.5mΩ,要對規格書曲線。
+5. **反接保護**:目前是 TVS + 保險絲撬棍式,電源短路電流大時 TVS 要撐到保險絲斷;考慮改理想二極體。
+
 ## 已查清(2026-10-12)
 
 規格書的向量圖在樹莓派上用 `pdftoppm` 轉成 PNG 讀出;連接器位置另外用官方

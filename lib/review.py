@@ -62,6 +62,7 @@ CATHODE_PIN = {
     # Diode.kicad_sym 的 SM6T6V8A(SMAJ5.0A 繼承它):橫桿(陰極)在 x = −1.27,
     # 那一側是 1 號腳(名稱寫 A1,其實是陰極)。D_SMA 封裝 1 號焊盤是色環端。
     "Diode:SMAJ5.0A": "1",
+    "Diode:SM6T68A": "1",       # 同樣繼承 SM6T6V8A(D_SMB 封裝 1 號焊盤是色環端)
 }
 SCHOTTKY_VF = (0.3, 0.4, 0.5)          # SS34 規格書:0.5V@3A,小電流約 0.3–0.4V
 GPIO_VOH = (3.1, 3.2, 3.3)             # ESP32-C3 在數 mA 時的 VOH(規格書只保證 0.8×VDD@40mA)
