@@ -27,3 +27,14 @@ jobs:
 
       - name: ERC, netlist check, design review, mutation tests, reproducibility
         run: bash tools/ci-schematic.sh
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Placement, freerouting, DRC, fab outputs
+        run: bash tools/ci-pcb.sh
+
+      - name: Compare boards with the committed ones
+        run: git diff --stat -- 'boards/*/*.kicad_pcb' 'boards/*/*.kicad_pro'
