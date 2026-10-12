@@ -32,8 +32,8 @@ def outward(part: Part, pin: str) -> tuple[int, int]:
     a = math.radians(part._pins[pin]["angle"] + 180)
     vx, vy = math.cos(a), -math.sin(a)     # 符号库 y 向上 → 图纸 y 向下
     r = math.radians(part.rotation)
-    rx = vx * math.cos(r) - vy * math.sin(r)
-    ry = vx * math.sin(r) + vy * math.cos(r)
+    rx = vx * math.cos(r) + vy * math.sin(r)       # 逆時針,同 schgen.Part.pin_xy
+    ry = -vx * math.sin(r) + vy * math.cos(r)
     return round(rx), round(ry)
 
 

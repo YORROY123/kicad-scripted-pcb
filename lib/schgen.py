@@ -55,8 +55,10 @@ class Part:
         p = self._pins[number]
         px, py = p["x"], -p["y"]
         a = math.radians(self.rotation)
-        rx = px * math.cos(a) - py * math.sin(a)
-        ry = px * math.sin(a) + py * math.cos(a)
+        # KiCad 的旋轉角是畫面上逆時針;圖紙 y 向下,所以矩陣與 y 向上時相反。
+        # 180° 兩種寫法結果相同,只有 90° / 270° 會接到鏡像位置(ERC 抓不到,網表比對才抓到)。
+        rx = px * math.cos(a) + py * math.sin(a)
+        ry = -px * math.sin(a) + py * math.cos(a)
         if self.mirror == "y":
             rx = -rx
         elif self.mirror == "x":
