@@ -15,6 +15,14 @@ Raspberry Pi Compute Module 5(含 eMMC)的通用載板,目標是 JLCPCB 能直�
 - `gen/cm5_sym.py` → `symbols/CM5.kicad_sym`:CM5_J1(CM5 腳 1–100)、CM5_J2(焊盤 n = CM5 腳 100+n)。
   `--verify <pdftotext 輸出>` 從規格書 4.2 Pinout 重新解析逐腳比對,目前 200/200 一致。
 
+- `gen/cm5_fp.py` → `footprints/CM5.pretty/Amphenol_10164227-1001A1RLF_2x50_P0.4mm.kicad_mod`:
+  一顆連接器一個封裝(J1、J2 共用,BOM 與座標檔才會逐顆列出),兩顆與 4 個孔的相對位置在
+  `MODULE`(模組中心為原點)。`--compare <官方封裝>` 把兩顆連接器與孔組回去,用 pcbnew 逐焊盤比對
+  位置、尺寸、形狀、類型、銅層、錫膏、阻焊:**200/200、孔 4/4 一致**。比對本身用 5 種故意改錯驗證過
+  (排距、焊盤寬、J2 偏 0.1 mm、孔偏 0.1 mm、奇偶排對調 = 腳 1 放錯邊),都會失敗。
+  兩顆照 `MODULE` 擺在空板上、每個焊盤不同網路,DRC 0。
+- `lib/pcbgen.py` 加 `EXTRA_FP_DIRS`:板子自己的封裝庫,先找這裡。
+
 ## 已查清(2026-10-12)
 
 規格書的向量圖在樹莓派上用 `pdftoppm` 轉成 PNG 讀出;連接器位置另外用官方
@@ -42,4 +50,3 @@ CM5 IO Board rev 2 的 KiCad 檔(<https://rpltd.co/cm5io-design-files>,`RP-00809
 
 1. 1.5 mm 堆疊時 CM5 底下**不能放零件**(擺件時當禁區)。
 2. **IP804AR 規格書沒有應用電路**,PoE 接法照 802.3 推導,要另外審。
-3. 自己生成的 CM5 封裝要逐焊盤對官方封裝(含焊盤 1 位置)。
