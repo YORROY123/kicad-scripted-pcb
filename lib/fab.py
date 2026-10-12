@@ -224,7 +224,7 @@ def main() -> int:
         w.writerows(review)
 
     # ── 位號一致:BOM = CPL,BOM ∪ 手焊 = 板上 ──
-    on_board = {fp.GetReference() for fp in board.GetFootprints()}
+    on_board = {fp.GetReference() for fp in board.GetFootprints() if not fp.IsBoardOnly()}  # 固定孔不貼
     in_cpl = {r[0] for r in cpl_rows}
     in_hand = {ref for r in hand_rows for ref in r[1].split(",")}
     if in_cpl != assembled:

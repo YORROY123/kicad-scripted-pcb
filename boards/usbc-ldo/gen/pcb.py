@@ -13,6 +13,9 @@ USBC_LDO = BoardSpec(
     name="usbc-ldo",
     width=40.0,
     height=24.0,
+    # M2.5 固定孔(courtyard 半徑 3mm):右下讓開 LED1
+    mounting_holes=((3.3, 3.3), (36.7, 3.3), (3.3, 20.7), (33.2, 20.7)),
+    mounting_hole_fp="MountingHole:MountingHole_2.7mm_M2.5",
     place={
         # ref: (x, y, rot)。HRO 封装开口朝 +y;转 -90° 后开口朝 -x(板左缘)。
         "J1": (4.2, 12.0, -90),
