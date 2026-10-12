@@ -167,7 +167,7 @@ add("U1", "RF_Module", "ESP32-C3-WROOM-02", 170, 80, "ESP32-C3-WROOM-02-N4",
 add("R3", "Device", "R", 110, 70, "10k", R0402, {"1": "+3V3", "2": "EN"})
 add("C4", "Device", "C", 118, 70, "1uF", C0402, {"1": "EN", "2": "GND"})
 add("SW1", "Switch", "SW_Push", 112, 88, "RESET", BUTTON, {"1": "EN", "2": "GND"})
-add("R4", "Device", "R", 110, 110, "10k", R0402, {"1": "+3V3", "2": "I09"})
+add("R4", "Device", "R", 110, 110, "10k", R0402, {"1": "+3V3", "2": "IO9"})
 add("SW2", "Switch", "SW_Push", 112, 128, "BOOT", BUTTON, {"1": "IO9", "2": "GND"})
 add("R5", "Device", "R", 226, 50, "10k", R0402, {"1": "+3V3", "2": "IO8"})
 add("R6", "Device", "R", 234, 50, "10k", R0402, {"1": "+3V3", "2": "IO2"})
