@@ -18,11 +18,13 @@ from pathlib import Path
 import pcbnew
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from pcbgen import mm  # noqa: E402
+from pcbgen import mm, stable_uuids  # noqa: E402
 
 
 def export_dsn(pcb: Path, dsn: Path) -> None:
     board = pcbnew.LoadBoard(str(pcb))
+    stable_uuids(board, pcb.stem)  # DSN 照 UUID 排序:汇出前统一
+    board.Save(str(pcb))
     if not pcbnew.ExportSpecctraDSN(board, str(dsn)):
         raise SystemExit("ExportSpecctraDSN 失败")
     print(f"wrote {dsn.name}")
@@ -70,6 +72,7 @@ def import_ses(pcb: Path, ses: Path) -> None:
     gnd_pour(board, pcbnew.B_Cu)
     pcbnew.ZONE_FILLER(board).Fill(board.Zones())
 
+    stable_uuids(board, pcb.stem)
     board.Save(str(pcb))
     print(f"imported {ses.name}: {len(tracks)} tracks, {len(vias)} vias; GND poured on F/B.Cu")
 
