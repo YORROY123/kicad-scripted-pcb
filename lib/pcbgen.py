@@ -103,6 +103,10 @@ class BoardSpec:
     fab_ref_libs: tuple = ()
     # 额外的网络类别:(名称, 线宽 mm, 间距 mm, 网名通配符…)。例:市电网 3mm 宽。
     netclasses: tuple = ()
+    # 固定孔中心 (x, y),mm。不在原理图里:放成「只在板上」的封装 H1、H2…,不进 BOM / CPL,
+    # 原理图一致性检查也略过。courtyard 照常参与重叠检查(螺丝头与垫圈要有空间)。
+    mounting_holes: tuple = ()
+    mounting_hole_fp: str = "MountingHole:MountingHole_3.2mm_M3"
     extra: dict = field(default_factory=dict)
 
 
@@ -188,6 +192,22 @@ def build(spec: BoardSpec, net_path: Path, out: Path) -> None:
             net = pad_net.get((ref, num))
             if net:
                 pad.SetNet(nets[net])
+
+    lib, name = spec.mounting_hole_fp.split(":")
+    for i, (x, y) in enumerate(spec.mounting_holes, 1):
+        ref = f"H{i}"
+        if ref in comps:
+            raise SystemExit(f"固定孔位号 {ref} 与原理图器件冲突")
+        fp = pcbnew.FootprintLoad(str(FP_DIR / f"{lib}.pretty"), name)
+        fp.SetReference(ref)
+        fp.SetValue(name)
+        fp.SetFPID(pcbnew.LIB_ID(lib, name))
+        fp.SetBoardOnly(True)
+        fp.SetExcludedFromBOM(True)
+        fp.SetExcludedFromPosFiles(True)
+        fp.Reference().SetLayer(pcbnew.F_Fab)  # 孔贴着板边,位号不必印
+        fp.SetPosition(at(x, y))
+        board.Add(fp)
 
     # 板框
     corners = [(0, 0), (spec.width, 0), (spec.width, spec.height), (0, spec.height)]
