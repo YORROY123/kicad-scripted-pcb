@@ -11,6 +11,8 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import uuid as _uuid
+
 import pcbnew
 
 # 新物件的 UUID 預設是隨機的,而 KiCad 的 Specctra 匯出器照 UUID 排序元件、image 與網路腳位。
@@ -223,8 +225,44 @@ def build(spec: BoardSpec, net_path: Path, out: Path) -> None:
     move_clashing_refs(board)
     check_placement(spec, board, comps, pad_net)
     # 网络类别存在 .kicad_pro,不在 .kicad_pcb;SaveBoard 会一并写出专案档
+    stable_uuids(board, spec.name)
     pcbnew.SaveBoard(str(out), board)
     print(f"wrote {out.name}: {len(comps)} footprints, {len(nets)} nets")
+
+
+_UUID_NS = _uuid.UUID("6f1c5a2e-3b8d-4e5f-9a10-c0ffee000001")
+
+
+def stable_uuids(board, name: str) -> None:
+    """每个物件的 UUID 由「板名 + 位号 + 种类 + 序号」算出来,与 KiCad 内部取号无关。
+
+    只靠 KIID.SeedGenerator 不够:KiCad 载入封装时会为暂存物件取号,10.0.6 与 10.0.7
+    取的个数不同(usbc-ldo 从 J1 开始分岔)。Specctra 汇出器照 UUID 排序元件与网络脚位,
+    UUID 一变 DSN 顺序就变,freerouting 结果也跟着变(本机 6 个过孔、CI 9 个)。
+    写板子的每一步(摆放、DSN 汇出前、SES 导入后、relay8 的市电步骤)存档前都要调用。
+    """
+    items = []
+    for fp in board.GetFootprints():
+        ref = fp.GetReference()
+        items.append((fp, ref))
+        items += [(f, f"{ref}/field/{i}") for i, f in enumerate(fp.GetFields())]
+        items += [(p, f"{ref}/pad/{p.GetNumber()}/{i}") for i, p in enumerate(fp.Pads())]
+        items += [(g, f"{ref}/gfx/{i}") for i, g in enumerate(fp.GraphicalItems())]
+        items += [(z, f"{ref}/zone/{i}") for i, z in enumerate(fp.Zones())]
+    items += [(d, f"drawing/{i}") for i, d in enumerate(board.GetDrawings())]
+    items += [(t, f"track/{i}") for i, t in enumerate(board.GetTracks())]
+    items += [(z, f"zone/{i}") for i, z in enumerate(board.Zones())]
+    keys = [k for _, k in items]
+    if len(set(keys)) != len(keys):
+        raise SystemExit("stable_uuids: 重复的键")
+    # 两阶段:重新载入后物件的列举顺序可能和存档前不同,直接改成最终值时,
+    # 目标 UUID 可能还在别的物件身上,KiCad 会跳「duplicate target UUID」断言。
+    # 先全部换成另一个命名空间的暂用值,再设最终值。
+    for stage in ("tmp", "final"):
+        for item, key in items:
+            want = str(_uuid.uuid5(_UUID_NS, f"{stage}/{name}/{key}" if stage == "tmp" else f"{name}/{key}"))
+            if item.m_Uuid.AsString() != want:
+                item.SetUuid(pcbnew.KIID(want))
 
 
 def move_clashing_refs(board) -> None:

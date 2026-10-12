@@ -18,7 +18,7 @@ import pcbnew
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(HERE.parents[2] / "lib"))
-from pcbgen import BoardSpec, build  # noqa: E402
+from pcbgen import BoardSpec, build, stable_uuids  # noqa: E402
 
 import mains  # noqa: E402
 
@@ -118,6 +118,7 @@ def stage_place() -> None:
     tracks = mains.add_mains_tracks(board)
     mains.add_routing_keepouts(board, W)
     labels = mains.add_terminal_labels(board, LABEL_BELOW)
+    stable_uuids(board, "relay8")
     board.Save(str(PCB))
     (ROOT / "relay8.kicad_dru").write_text(mains.DRU, encoding="utf-8", newline="\n")
     print(f"mains: {tracks} segments, {slots} slots, {labels} terminal labels, routing keepouts; "
@@ -133,6 +134,7 @@ def stage_finish() -> None:
         if pad.GetNumber() == "SH":
             pad.SetLocalZoneConnection(pcbnew.ZONE_CONNECTION_FULL)
     pcbnew.ZONE_FILLER(board).Fill(board.Zones())
+    stable_uuids(board, "relay8")
     board.Save(str(PCB))
     print(f"mains: re-added {tracks} segments, GND fill keepouts, zones refilled")
 
