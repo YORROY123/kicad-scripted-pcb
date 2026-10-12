@@ -2,6 +2,7 @@
 
 目前完成的區塊
   1. 54V 輸入與 5V 主電源(LM5146)
+  2. 5V → 3.3V / 8A(TPS568230)
 
 ──────────────── 1. 54V 輸入 → 5V / 12A ────────────────
 J20 54V 輸入 → F1(4A)→ +54V。D20(SM6T68A,VRM 58.1V)跨在 +54V 對地:
@@ -23,6 +24,21 @@ LM5146 照 TI 規格書 ZHCSLJ7A 9.2.1 Design 1(48V → 5V / 12A、300kHz)改:
   - MOSFET 用 Infineon(原設計的 onsemi 兩顆 JLC 都沒庫存):高側 BSC160N10NS3G、低側 BSC070N10NS5
   - 電感 TDK SPM10065VT-3R3M-D(原設計列的同系列),3.3µH
   - PGOOD 拉到 +5V,之後給 3.3V 降壓當致能
+
+──────────────── 2. 5V → 3.3V / 8A ────────────────
+CM5 的 CM5_3.3V 輸出每腳 300mA、共 600mA,不夠 → 另做 3.3V。負載估計:M.2 NVMe 2.5A(M.2 規範)
++ LAN7800 ×2 + USB2514B ≈ 3.5A,TPS568230(8A,TI 規格書 ZHCSIY3C)餘量足。
+  - FB:R21 91k / R22 20k → 0.6 ×(1 + 91/20)= 3.33V(式 4;表 3 用 90k/20k,90k 不是標準值)
+  - 表 3:3.3V @ 600kHz → L 1.5µH、COUT 66–500µF、CFF 47–330pF
+    → L20 Vishay IHLP4040DZER1R5M01(1.5µH,KiCad 有封裝)、C40–C43 47µF ×4、C44 CFF 100pF
+    漣波 (5 − 3.3) × 0.66 / (600k × 1.5µ) ≈ 1.25A,峰值 8.6A(8A 滿載)
+  - MODE:R23 330k(VCC → MODE)/ R24 5.1k → Eco-mode、600kHz(表 1)
+  - 輸入:TI 建議 VIN 40µF → C45、C46 47µF + C47 100nF;VCC 1µF(C48);BST 100nF(C49)
+  - SS 空接 → 內建約 1.3ms
+  - EN 絕對最大 4V,不能直接接 LM5146 的 PGOOD(拉到 5V)→ R19 30k 對地與 R18 20k 分壓:
+    PGOOD 放開時 EN = 5 × 30 / 50 = 3.0V(> VENH 最大 1.4V、< 4V);PGOOD 拉低時 0V。
+    所以 3.3V 在 5V 穩定後才啟動。
+  - PGOOD 拉到 +3V3(R25 100k),之後可給 CM5 或 LAN7800 當重置條件
 """
 import sys
 from pathlib import Path
@@ -99,7 +115,34 @@ add("Q11", "Transistor_FET", "BSC070N10NS5", 156, 84, "BSC070N10NS5",
     "Package_TO_SOT_SMD:TDSON-8-1", {"5": "SW", "4": "LO", "1": "GND", "2": "GND", "3": "GND"})
 add("L10", "Device", "L", 180, 70, "3.3uH SPM10065VT", "Inductor_SMD:L_Bourns_SRP1050WA",
     {"1": "SW", "2": "+5V"}, rot=90)
+flag("+5V", 196, 60)      # 由電感(被動)輸出,ERC 需要知道它有供電
 for i in range(5):
     add(f"C{30 + i}", "Device", "C", 200 + 8 * i, 76, "47uF", C1210, {"1": "+5V", "2": "GND"})
+
+# ── 2. 3.3V ───────────────────────────────────────────────────────────
+add("R19", "Device", "R", 130, 112, "30k", R0402, {"1": "PG_5V", "2": "GND"})
+add("U20", "Regulator_Switching", "TPS568230", 80, 170, "TPS568230RJER",
+    "Package_DFN_QFN:Texas_RJE0020A_VQFN-20-1EP_3x3mm_P0.45mm_EP0.675x0.76mm", {
+        "2": "+5V", "3": "+5V", "4": "+5V", "5": "+5V",
+        "1": "BST3", "6": "SW3", "19": "SW3", "20": "SW3",
+        "7": "GND", "8": "GND", "18": "GND", "21": "GND", "13": "GND",
+        "9": "PG_3V3", "10": None, "16": None, "11": None,
+        "12": "PG_5V", "14": "FB3", "15": "MODE3", "17": "VCC3",
+    })
+for i, ref in enumerate(("C45", "C46")):
+    add(ref, "Device", "C", 30 + 8 * i, 160, "47uF", C1210, {"1": "+5V", "2": "GND"})
+add("C47", "Device", "C", 46, 160, "100nF", C0402, {"1": "+5V", "2": "GND"})
+add("C48", "Device", "C", 120, 190, "1uF", C0402, {"1": "VCC3", "2": "GND"})
+add("R23", "Device", "R", 130, 176, "330k", R0402, {"1": "VCC3", "2": "MODE3"})
+add("R24", "Device", "R", 130, 192, "5.1k", R0402, {"1": "MODE3", "2": "GND"})
+add("C49", "Device", "C", 120, 150, "100nF", C0402, {"1": "BST3", "2": "SW3"})
+add("L20", "Device", "L", 160, 166, "1.5uH IHLP4040", "Inductor_SMD:L_Vishay_IHLP-4040",
+    {"1": "SW3", "2": "+3V3"})
+add("R21", "Device", "R", 180, 180, "91k", R0402, {"1": "+3V3", "2": "FB3"})
+add("C44", "Device", "C", 190, 180, "100pF", C0402, {"1": "+3V3", "2": "FB3"})
+add("R22", "Device", "R", 180, 196, "20k", R0402, {"1": "FB3", "2": "GND"})
+for i in range(4):
+    add(f"C{40 + i}", "Device", "C", 200 + 8 * i, 172, "47uF", C1210, {"1": "+3V3", "2": "GND"})
+add("R25", "Device", "R", 140, 150, "100k", R0402, {"1": "+3V3", "2": "PG_3V3"})
 
 n.write(HERE.parent / "cm5.kicad_sch")

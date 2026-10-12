@@ -1,3 +1,4 @@
 OK    decoupling      U10   VIN(+54V)對地 128.30µF:C10 100uF, C11 4.7uF, C12 4.7uF, C13 4.7uF, C14 4.7uF, C15 4.7uF, C16 4.7uF, C17 100nF
-設計審查:ERROR 0、WARN 0、INFO 0、OK 1
+OK    decoupling      U20   VIN(+5V)對地 329.10µF:C30 47uF, C31 47uF, C32 47uF, C33 47uF, C34 47uF, C45 47uF, C46 47uF, C47 100nF
+設計審查:ERROR 0、WARN 0、INFO 0、OK 2
 推算出的網電壓:GND 0.00V
