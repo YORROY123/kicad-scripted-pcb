@@ -50,12 +50,15 @@ assert len(PINOUT) == 200, len(PINOUT)
 NAME = {i + 1: n for i, n in enumerate(PINOUT)}
 
 
-def etype(name: str) -> str:
+def etype(name: str, pin: int = 0) -> str:
     """ERC 用的電氣類型。電源腳照方向給,其餘一律 passive(避免 input 沒驅動的假警告)。"""
     if name in ("GND", "5V", "GPIO_VREF", "VBAT"):
         return "power_in"
     if name in ("CM5_3.3V", "CM5_1.8V"):
-        return "power_out"
+        # 每路兩支腳(84/86、88/90)是同一個輸出;兩支都標 power_out,ERC 會當成兩個電源互接
+        return "power_out" if pin in (84, 88) else "passive"
+    if name in ("LED_nPWR", "LED_nACT"):   # 模組內是開汲極拉低(VOL < 0.4V),review.py 的 led-current 要知道
+        return "open_collector"
     return "passive"
 
 
@@ -112,7 +115,7 @@ def symbol(sym: str, first: int, desc: str) -> str:
         row = (pad - 1) // 2
         y = round(top - row * P, 2)
         x, ang = (-(HALF_W + P), 0) if pad % 2 else (HALF_W + P, 180)
-        out.append(f"\t\t\t(pin {etype(name)} line\n\t\t\t\t(at {x} {y} {ang})\n\t\t\t\t(length {P})\n"
+        out.append(f"\t\t\t(pin {etype(name, first + pad - 1)} line\n\t\t\t\t(at {x} {y} {ang})\n\t\t\t\t(length {P})\n"
                    f'\t\t\t\t(name "{name}"\n\t\t\t\t\t{font()}\n\t\t\t\t)\n'
                    f'\t\t\t\t(number "{pad}"\n\t\t\t\t\t{font()}\n\t\t\t\t)\n\t\t\t)\n')
     out.append("\t\t)\n\t\t(embedded_fonts no)\n\t)\n")
