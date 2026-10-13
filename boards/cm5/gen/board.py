@@ -3,6 +3,7 @@
 目前完成的區塊
   1. 54V 輸入與 5V 主電源(LM5146)
   2. 5V → 3.3V / 8A(TPS568230)
+  3. CM5 連接器:電源腳、GPIO_VREF、RTC 電池、電源鍵、nRPIBOOT、電源/活動燈
 
 ──────────────── 1. 54V 輸入 → 5V / 12A ────────────────
 J20 54V 輸入 → F1(4A)→ +54V。D20(SM6T68A,VRM 58.1V)跨在 +54V 對地:
@@ -35,9 +36,11 @@ CM5 的 CM5_3.3V 輸出每腳 300mA、共 600mA,不夠 → 另做 3.3V。負載�
   - MODE:R23 330k(VCC → MODE)/ R24 5.1k → Eco-mode、600kHz(表 1)
   - 輸入:TI 建議 VIN 40µF → C45、C46 47µF + C47 100nF;VCC 1µF(C48);BST 100nF(C49)
   - SS 空接 → 內建約 1.3ms
-  - EN 絕對最大 4V,不能直接接 LM5146 的 PGOOD(拉到 5V)→ R19 30k 對地與 R18 20k 分壓:
-    PGOOD 放開時 EN = 5 × 30 / 50 = 3.0V(> VENH 最大 1.4V、< 4V);PGOOD 拉低時 0V。
-    所以 3.3V 在 5V 穩定後才啟動。
+  - EN 由 LM5146 的 PGOOD(開汲極)經 R18 10k 拉到 CM5_3V3 驅動 →「5V 正常 且 CM5 開機」才啟動。
+    CM5 規格書 3.1:5V 出現前任何腳都不能有電;關機(PMIC_Enable 拉低或軟體關機)時 CM5_3.3V
+    會掉,+3V3 跟著關,掛在 +3V3 上的周邊就不會倒灌進模組(規格書第 6 章的 back-feeding 檢查)。
+    官方 CM5 IO 板也是讓 CM5 控制周邊電源(M.2 的 3.3V 由 PCIE_PWR_EN 開)。
+    EN 絕對最大 4V:CM5_3.3V 最高 3.465V,可直接接;VENH 最大 1.4V。
   - PGOOD 拉到 +3V3(R25 100k),之後可給 CM5 或 LAN7800 當重置條件
 """
 import sys
@@ -51,7 +54,7 @@ ksym.EXTRA_DIRS.append(HERE.parent / "symbols")
 from netlabel import NetLabeler  # noqa: E402
 from schgen import Schematic  # noqa: E402
 
-s = Schematic(paper="A3", title="Raspberry Pi CM5 carrier")
+s = Schematic(paper="A1", title="Raspberry Pi CM5 carrier")
 n = NetLabeler(s)
 add, flag = n.add, n.flag
 
@@ -106,7 +109,7 @@ add("C21", "Device", "C", 120, 52, "100nF", C0402, {"1": "BST", "2": "SW"})
 add("C20", "Device", "C", 120, 92, "2.2uF", C0603, {"1": "VCC", "2": "GND"})
 add("R13", "Device", "R", 130, 80, "412", R0805, {"1": "ILIM", "2": "SW"})
 add("C19", "Device", "C", 138, 92, "15pF", C0402, {"1": "ILIM", "2": "GND"})
-add("R18", "Device", "R", 130, 100, "20k", R0402, {"1": "+5V", "2": "PG_5V"})
+add("R18", "Device", "R", 130, 100, "10k", R0402, {"1": "CM5_3V3", "2": "PG_5V"})
 
 # 功率級:Q10 高側(D = +54V、S = SW)、Q11 低側(D = SW、S = GND)
 add("Q10", "Transistor_FET", "BSC160N10NS3G", 156, 56, "BSC160N10NS3G",
@@ -120,7 +123,6 @@ for i in range(5):
     add(f"C{30 + i}", "Device", "C", 200 + 8 * i, 76, "47uF", C1210, {"1": "+5V", "2": "GND"})
 
 # ── 2. 3.3V ───────────────────────────────────────────────────────────
-add("R19", "Device", "R", 130, 112, "30k", R0402, {"1": "PG_5V", "2": "GND"})
 add("U20", "Regulator_Switching", "TPS568230", 80, 170, "TPS568230RJER",
     "Package_DFN_QFN:Texas_RJE0020A_VQFN-20-1EP_3x3mm_P0.45mm_EP0.675x0.76mm", {
         "2": "+5V", "3": "+5V", "4": "+5V", "5": "+5V",
@@ -144,5 +146,50 @@ add("R22", "Device", "R", 180, 196, "20k", R0402, {"1": "FB3", "2": "GND"})
 for i in range(4):
     add(f"C{40 + i}", "Device", "C", 200 + 8 * i, 172, "47uF", C1210, {"1": "+3V3", "2": "GND"})
 add("R25", "Device", "R", 140, 150, "100k", R0402, {"1": "+3V3", "2": "PG_3V3"})
+
+# ── 3. CM5 連接器 ─────────────────────────────────────────────────────
+# 腳名照 cm5_sym.NAME(規格書 4.2,--verify 200/200)。J1 = CM5 腳 1–100,J2 的焊盤 n = CM5 腳 100+n。
+# 這一區只接電源與基本控制;其餘腳先打 NC,之後各區塊(網路、USB、PCIe、HDMI、40-pin)再接上。
+#   CM5 規格書 4.3:GPIO_VREF 不能浮接 → CM5_3V3(GPIO 用 3.3V);EEPROM_nWP、PMIC_Enable、
+#   WL/BT_nDisable 有內部上拉,不用就浮接;CM5 有 eMMC,SD 介面與 SD_PWR_ON / SD_VDD_OVERRIDE 不接;
+#   CC1/CC2 是給 USB-C 供電協商用,本板 5V 來自 54V 降壓 → 不接。
+#   LED 照官方 CM5 IO 板:陽極接 CM5_3.3V、經 1k 接模組的 LED 腳(LED_nPWR 規格書說要緩衝,
+#   官方仍直接帶 1k,電流 ≈ 1mA)。
+#   RTC:CR2032 + Keystone 3034(與官方 IO 板同款,JLC C5213768)。CM5 可對 VBAT 涓流充電,
+#   預設關閉;CR2032 不可充電 → config.txt 不要設 dtparam=rtc_bbat_vchg(寫進韌體交接)。
+sys.path.insert(0, str(HERE))
+from cm5_sym import NAME  # noqa: E402
+
+RAIL = {"GND": "GND", "5V": "+5V", "CM5_3.3V": "CM5_3V3", "CM5_1.8V": "CM5_1V8"}
+CM5_PINS = {
+    76: "VBAT", 78: "CM5_3V3",               # GPIO_VREF
+    92: "PWR_BUT", 93: "nRPIBOOT", 95: "LED_nPWR", 21: "LED_nACT",
+}
+
+
+def cm5_map(first: int) -> dict:
+    out = {}
+    for pad in range(1, 101):
+        pin = first + pad - 1
+        out[str(pad)] = RAIL.get(NAME[pin], CM5_PINS.get(pin))
+    return out
+
+
+add("J1", "CM5", "CM5_J1", 300, 110, "CM5 pins 1-100", "CM5:Amphenol_10164227-1001A1RLF_2x50_P0.4mm", cm5_map(1))
+add("J2", "CM5", "CM5_J2", 420, 110, "CM5 pins 101-200", "CM5:Amphenol_10164227-1001A1RLF_2x50_P0.4mm", cm5_map(101))
+add("C50", "Device", "C", 280, 220, "47uF", C1210, {"1": "+5V", "2": "GND"})
+add("C51", "Device", "C", 290, 220, "100nF", C0402, {"1": "+5V", "2": "GND"})
+flag("VBAT", 304, 210)     # 電池是被動元件,ERC 需要知道 VBAT 有電源
+add("BT50", "Device", "Battery_Cell", 304, 220, "CR2032", "Battery:BatteryHolder_Keystone_3034_1x20mm",
+    {"1": "VBAT", "2": "GND"})
+BUTTON = "Button_Switch_SMD:SW_Push_1P1T_NO_CK_KMR2"
+add("SW50", "Switch", "SW_Push", 320, 220, "POWER", BUTTON, {"1": "PWR_BUT", "2": "GND"})
+add("SW51", "Switch", "SW_Push", 336, 220, "RPIBOOT", BUTTON, {"1": "nRPIBOOT", "2": "GND"})
+LED0805 = "LED_SMD:LED_0805_2012Metric"
+# Device:LED 是 1 = K、2 = A
+add("D50", "Device", "LED", 356, 214, "RED", LED0805, {"2": "CM5_3V3", "1": "LED_PWR_K"})
+add("R50", "Device", "R", 356, 228, "1k", R0402, {"1": "LED_PWR_K", "2": "LED_nPWR"})
+add("D51", "Device", "LED", 372, 214, "GREEN", LED0805, {"2": "CM5_3V3", "1": "LED_ACT_K"})
+add("R51", "Device", "R", 372, 228, "1k", R0402, {"1": "LED_ACT_K", "2": "LED_nACT"})
 
 n.write(HERE.parent / "cm5.kicad_sch")

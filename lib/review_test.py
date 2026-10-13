@@ -90,7 +90,9 @@ CASES = [
     ("cm5", "rail-range", "U20", "LM5146 回授分壓上下對調(+5V 變 0.95V,低於 TPS568230 VIN 4.5V)",
      lambda nl: (set_value(nl, "R14", "4.42k"), set_value(nl, "R15", "23.2k"))),
     ("cm5", "decoupling", "U20", "+5V 的 47µF 全拿掉,只剩 100nF(TI 建議 VIN 40µF)",
-     lambda nl: [remove(nl, r) for r in ("C30", "C31", "C32", "C33", "C34", "C45", "C46")]),
+     lambda nl: [remove(nl, r) for r in ("C30", "C31", "C32", "C33", "C34", "C45", "C46", "C50")]),
+    ("cm5", "rail-range", "J1", "GPIO_VREF 接地(CM5 規格書:不能浮接或接地)", lambda nl: move(nl, "J1", "78", "GND")),
+    ("cm5", "rail-range", "J1", "CM5 的 5V 腳接到 +3V3", lambda nl: [move(nl, "J1", p, "+3V3") for p in ("77", "79")]),
 ]
 
 

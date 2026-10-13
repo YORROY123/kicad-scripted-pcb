@@ -442,7 +442,7 @@
 					)
 				)
 			)
-			(pin passive line
+			(pin open_collector line
 				(at -27.939999999999998 36.83 0)
 				(length 2.54)
 				(name "LED_nACT"
@@ -1612,7 +1612,7 @@
 					)
 				)
 			)
-			(pin power_out line
+			(pin passive line
 				(at 27.939999999999998 -44.45 180)
 				(length 2.54)
 				(name "CM5_3.3V"
@@ -1684,7 +1684,7 @@
 					)
 				)
 			)
-			(pin power_out line
+			(pin passive line
 				(at 27.939999999999998 -49.53 180)
 				(length 2.54)
 				(name "CM5_1.8V"
@@ -1774,7 +1774,7 @@
 					)
 				)
 			)
-			(pin passive line
+			(pin open_collector line
 				(at -27.939999999999998 -57.15 0)
 				(length 2.54)
 				(name "LED_nPWR"
