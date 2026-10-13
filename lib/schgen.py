@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 
 import ksym
 
-SHEET = {"A4": (297.0, 210.0), "A3": (420.0, 297.0)}
+SHEET = {"A4": (297.0, 210.0), "A3": (420.0, 297.0), "A2": (594.0, 420.0), "A1": (841.0, 594.0)}
 
 
 # 固定种子:同一份 board.py 每次生成逐字节相同的 .kicad_sch(git diff 只剩真改动)。

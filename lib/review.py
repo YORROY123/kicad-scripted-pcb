@@ -46,6 +46,10 @@ SOURCES = {
     "Converter_ACDC:HLK-10M05": {"+Vout": (4.8, 5.0, 5.2), "-Vout": (0.0, 0.0, 0.0)},
     # USB 2.0 §7.2.1:VBUS 在設備端 4.40–5.25V(低功率裝置下限)
     "Connector:USB_C_Receptacle_USB2.0_16P": {"VBUS": (4.40, 5.0, 5.25), "GND": (0.0, 0.0, 0.0)},
+    # Raspberry Pi CM5 規格書 4.3:CM5_3.3V / CM5_1.8V 輸出 ±5%
+    "CM5:CM5_J1": {"CM5_3.3V": (3.135, 3.3, 3.465), "CM5_1.8V": (1.71, 1.8, 1.89)},
+    # CR2032:新品約 3.2V,放電末期約 2.5V
+    "Device:Battery_Cell": {"+": (2.5, 3.0, 3.3), "-": (0.0, 0.0, 0.0)},
 }
 # 可調式穩壓器:lib_id → (FB 腳名, (最低, 標稱, 最高) VREF, 出處)。輸出 = VREF × (1 + R上 / R下),
 # R上 = FB 網到輸出網的電阻、R下 = FB 網到 GND 的電阻;電阻取 ±1%。
@@ -64,6 +68,11 @@ SUPPLY_PINS = {
         "IN": (3.3 + 0.55, 10.0, 1e-6, "LP38693 規格書:VIN ≤ 10V(操作),壓差 550mV@0.5A,CIN ≥ 1µF"),
         "OUT": (None, None, 1e-6, "LP38693 規格書:COUT ≥ 1µF 陶瓷"),
     },
+    "CM5:CM5_J1": {
+        "5V": (4.75, 5.25, None, "CM5 規格書 4.3:5V 4.75–5.25V,上電要單調升到 4.75V 以上"),
+        "GPIO_VREF": (1.71, 3.465, None, "CM5 規格書 4.3:GPIO_VREF 接 CM5_3.3V 或 CM5_1.8V,不能浮接或接地"),
+        "VBAT": (2.5, 3.5, None, "CM5 規格書 4.3:VBAT 2.5–3.5V"),
+    },
     "Regulator_Switching:TPS568230": {
         "VIN": (4.5, 18.0, 40e-6, "TPS568230 規格書 ZHCSIY3C:VIN 4.5–18V,TI 建議 VIN 去耦 40µF"),
     },
@@ -79,6 +88,7 @@ SCHOTTKY_VF = (0.3, 0.4, 0.5)          # SS34 規格書:0.5V@3A,小電流約 0.3
 GPIO_VOH = (3.1, 3.2, 3.3)             # ESP32-C3 在數 mA 時的 VOH(規格書只保證 0.8×VDD@40mA)
 OPEN_COLLECTOR_VCE = {                 # 導通時集極對地壓降
     "Transistor_Array:ULN2803A": (0.7, 0.9, 1.1),   # TI ULN2803A:VCE(sat) 0.9–1.1V @100mA
+    "CM5:CM5_J1": (0.0, 0.2, 0.4),                   # CM5 規格書:LED_nACT VOL < 0.4V(LED_nPWR 同為開汲極)
 }
 INDUCTIVE = {
     # Songle SRD-05VDC-SL-C:線圈 5V / 70Ω,吸合電壓 ≤ 75% 額定
@@ -370,6 +380,9 @@ class Review:
             spec = SUPPLY_PINS.get(c["lib_id"], {})
             for p in nl.pins[ref].values():
                 rule = spec.get(p.name)
+                if p.net == "GND" and rule and rule[0]:
+                    self.add("ERROR", "rail-range", ref, f"{p.name} 接到 GND(要 {rule[0]:.2f}V 以上;{rule[3]})")
+                    continue
                 if p.type != "power_in" or p.net == "GND" or not (rule or ref.startswith("U")):
                     continue
                 v = self.v.get(p.net)
@@ -382,6 +395,8 @@ class Review:
                             self.add("ERROR", "rail-range", ref, f"{p.name} 在 {p.net} 最低 {v[0]:.2f}V < {lo:.2f}V({src})")
                         if hi is not None and v[2] > hi:
                             self.add("ERROR", "rail-range", ref, f"{p.name} 在 {p.net} 最高 {v[2]:.2f}V > {hi:.2f}V({src})")
+                if rule and rule[2] is None:
+                    continue   # 規格書沒有去耦要求(例如 CM5 的 GPIO_VREF、VBAT)
                 caps = self.caps_to_gnd(p.net)
                 total = sum(x for _, x in caps)
                 need = rule[2] if rule else None
@@ -428,16 +443,26 @@ class Review:
             if not self.is_led(ref) or not self.cathode(ref):
                 continue
             k, a = self.cathode(ref), self.anode(ref)
-            rs = [r for r in nl.nets[a.net] if r.ref.startswith("R") and len(nl.pins[r.ref]) == 2]
-            if len(rs) != 1:
-                self.add("WARN", "led-current", ref, f"陽極網 {a.net} 上有 {len(rs)} 顆電阻,算不出電流")
-                continue
-            r = rs[0].ref
-            vs = self.high_side(nl.two_pin(r, a.net), {ref})
-            if k.net == "GND":
+
+            def series_r(net):
+                return [q.ref for q in nl.nets[net] if q.ref.startswith("R") and len(nl.pins[q.ref]) == 2]
+            rk = series_r(k.net) if k.net != "GND" and len(nl.nets[k.net]) == 2 else []
+            if a.net in self.v and len(rk) == 1:
+                # 陽極直接接電源、電阻在陰極側:電源 → LED → R → 驅動腳(或 GND)
+                r, hs = rk[0], a.net
+                vs, low = self.v[a.net], nl.two_pin(rk[0], k.net)
+            else:
+                rs = series_r(a.net)
+                if len(rs) != 1:
+                    self.add("WARN", "led-current", ref, f"陽極網 {a.net} 上有 {len(rs)} 顆電阻,算不出電流")
+                    continue
+                r = rs[0]
+                hs = nl.two_pin(r, a.net)
+                vs, low = self.high_side(hs, {ref}), k.net
+            if low == "GND":
                 vl = (0.0, 0.0, 0.0)
             else:
-                drv = [q for q in nl.nets[k.net] if q.type == "open_collector"]
+                drv = [q for q in nl.nets.get(low, []) if q.type == "open_collector"]
                 vl = OPEN_COLLECTOR_VCE.get(nl.lib(drv[0].ref)) if drv else None
             vf = range_attr(self.attrs(ref).get("Voltage - Forward(Vf)"))
             rv = self.value(r)
@@ -448,7 +473,6 @@ class Review:
             i_lo = (vs[0] - vf[2] - vl[2]) / rv * 1e3
             i_mid = (vs[1] - vf[1] - vl[1]) / rv * 1e3
             i_hi = (vs[2] - vf[0] - vl[0]) / rv * 1e3
-            hs = nl.two_pin(r, a.net)
             if hs in self.v:
                 self.load.setdefault(hs, []).append((max(i_hi, 0) / 1e3, f"{ref} LED"))
             msg = (f"{nl.comps[ref]['value']} 經 {r} {nl.comps[r]['value']}:電流 {max(i_lo, 0):.2f} / {i_mid:.2f} / "
