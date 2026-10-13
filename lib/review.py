@@ -47,6 +47,14 @@ SOURCES = {
     # USB 2.0 §7.2.1:VBUS 在設備端 4.40–5.25V(低功率裝置下限)
     "Connector:USB_C_Receptacle_USB2.0_16P": {"VBUS": (4.40, 5.0, 5.25), "GND": (0.0, 0.0, 0.0)},
 }
+# 可調式穩壓器:lib_id → (FB 腳名, (最低, 標稱, 最高) VREF, 出處)。輸出 = VREF × (1 + R上 / R下),
+# R上 = FB 網到輸出網的電阻、R下 = FB 網到 GND 的電阻;電阻取 ±1%。
+ADJUSTABLE = {
+    "CM5_Parts:LM5146": ("FB", (0.792, 0.800, 0.808), "LM5146 規格書 ZHCSLJ7A:VREF 792–808mV(全溫度)"),
+    # 規格書只保證 25°C 594–606mV;溫度曲線最高約 610mV → 保守取 ±1.5%
+    "Regulator_Switching:TPS568230": ("FB", (0.591, 0.600, 0.609), "TPS568230 規格書 ZHCSIY3C:VFB 600mV"),
+}
+R_TOL = 0.01
 # 電源腳的容許範圍與去耦需求:lib_id → {腳位名稱: (最低 V, 最高 V, 最小總電容 F, 出處)}
 SUPPLY_PINS = {
     "RF_Module:ESP32-C3-WROOM-02": {
@@ -55,6 +63,9 @@ SUPPLY_PINS = {
     "Regulator_Linear:LP38693MP-3.3": {
         "IN": (3.3 + 0.55, 10.0, 1e-6, "LP38693 規格書:VIN ≤ 10V(操作),壓差 550mV@0.5A,CIN ≥ 1µF"),
         "OUT": (None, None, 1e-6, "LP38693 規格書:COUT ≥ 1µF 陶瓷"),
+    },
+    "Regulator_Switching:TPS568230": {
+        "VIN": (4.5, 18.0, 40e-6, "TPS568230 規格書 ZHCSIY3C:VIN 4.5–18V,TI 建議 VIN 去耦 40µF"),
     },
 }
 # 腳位名稱看不出陰極的二極體:lib_id → 陰極腳號(由符號圖形判讀)
@@ -238,6 +249,10 @@ class Review:
             for name, r in SOURCES.get(c["lib_id"], {}).items():
                 for p in nl.by_name(ref, name):
                     put(p.net, r)
+        for ref, c in nl.comps.items():
+            r = self.adjustable_out(ref, c["lib_id"])
+            if r:
+                put(*r)
         for _ in range(8):   # 經過二極體 / P-MOS 傳遞,直到不再變
             cur = {n: merge(rs) for n, rs in v.items()}
             changed = False
@@ -257,6 +272,36 @@ class Review:
             if not changed:
                 break
         self.v = {n: merge(rs) for n, rs in v.items()}
+
+    def adjustable_out(self, ref, lib_id):
+        """可調穩壓器的輸出網與電壓範圍;分壓認不出來回傳 None(並報 WARN)。"""
+        spec = ADJUSTABLE.get(lib_id)
+        if not spec:
+            return None
+        nl = self.nl
+        fb = nl.by_name(ref, spec[0])
+        if not fb:
+            return None
+        fbn = fb[0].net
+        lower = nl.parts_between(fbn, "GND", "R")
+        upper = {}
+        for r in {p.ref for p in nl.nets.get(fbn, []) if p.ref.startswith("R")} - set(lower):
+            other = nl.two_pin(r, fbn)
+            if other and other != "GND":
+                upper.setdefault(other, []).append(r)
+        if len(lower) != 1 or len(upper) != 1 or len(next(iter(upper.values()))) != 1:
+            self.add("WARN", "adjustable", ref, f"{spec[0]}({fbn})的分壓認不出來:對地 {lower}、往上 {upper}")
+            return None
+        out, (ru,) = next(iter(upper.items()))
+        rl, (ru_v, rl_v) = lower[0], (self.value(ru), self.value(lower[0]))
+        if not ru_v or not rl_v:
+            return None
+        lo, typ, hi = spec[1]
+        r = (lo * (1 + ru_v * (1 - R_TOL) / (rl_v * (1 + R_TOL))), typ * (1 + ru_v / rl_v),
+             hi * (1 + ru_v * (1 + R_TOL) / (rl_v * (1 - R_TOL))))
+        self.add("OK", "adjustable", ref, f"{out} = VREF × (1 + {ru} {nl.comps[ru]['value']} / {rl} "
+                 f"{nl.comps[rl]['value']}) = {fmt_v(r)}({spec[2]},電阻 ±1%)")
+        return out, r
 
     def cathode(self, ref) -> Pin | None:
         k = self.nl.by_name(ref, "K")

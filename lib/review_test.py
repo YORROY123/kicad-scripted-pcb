@@ -22,7 +22,8 @@ BOARDS = Path(__file__).resolve().parent.parent / "boards"
 def load(board):
     bdir = BOARDS / board
     nl = Netlist(bdir / "net.txt")
-    parts = json.loads((bdir / "lcsc-check.json").read_text(encoding="utf-8"))["parts"]
+    lf = bdir / "lcsc-check.json"   # 還沒核對料號的板子(cm5)沒有這個檔
+    parts = json.loads(lf.read_text(encoding="utf-8"))["parts"] if lf.exists() else {}
     wf = bdir / "review-waivers.json"
     waivers = json.loads(wf.read_text(encoding="utf-8")) if wf.exists() else {}
     return nl, parts, waivers
@@ -83,6 +84,13 @@ CASES = [
     ("esp32c3", "ldo-thermal", "U2", "環境溫度 50 → 85°C", lambda nl: setattr(review, "TA", 85.0)),
     ("esp32c3", "vbus-cap", "J1", "拿掉軟啟動的閘-源電容 C6", lambda nl: remove(nl, "C6")),
     ("esp32c3", "vbus-cap", "J1", "VBUS 電容 1µF → 22µF", lambda nl: set_value(nl, "C1", "22uF")),
+    # 可調穩壓器:電壓由回授分壓推算,下游的電源腳範圍才檢查得到
+    ("cm5", "rail-range", "U20", "LM5146 上分壓 23.2k → 232k(+5V 變 42.8V,超過 TPS568230 VIN 18V)",
+     lambda nl: set_value(nl, "R14", "232k")),
+    ("cm5", "rail-range", "U20", "LM5146 回授分壓上下對調(+5V 變 0.95V,低於 TPS568230 VIN 4.5V)",
+     lambda nl: (set_value(nl, "R14", "4.42k"), set_value(nl, "R15", "23.2k"))),
+    ("cm5", "decoupling", "U20", "+5V 的 47µF 全拿掉,只剩 100nF(TI 建議 VIN 40µF)",
+     lambda nl: [remove(nl, r) for r in ("C30", "C31", "C32", "C33", "C34", "C45", "C46")]),
 ]
 
 
@@ -95,7 +103,7 @@ def errors(nl, parts, waivers):
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8")
     bad = 0
-    for board in ("usbc-ldo", "esp32c3", "relay8"):
+    for board in ("usbc-ldo", "esp32c3", "relay8", "cm5"):
         e = errors(*load(board))
         print(f"{'PASS' if not e else 'FAIL'}  {board}:原樣 0 ERROR" + (f",實際 {e}" if e else ""))
         bad += bool(e)

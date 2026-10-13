@@ -1,4 +1,6 @@
+OK    adjustable      U10   +5V = VREF × (1 + R14 23.2k / R15 4.42k) = 4.87–5.13V(LM5146 規格書 ZHCSLJ7A:VREF 792–808mV(全溫度),電阻 ±1%)
+OK    adjustable      U20   +3V3 = VREF × (1 + R21 91k / R22 20k) = 3.23–3.44V(TPS568230 規格書 ZHCSIY3C:VFB 600mV,電阻 ±1%)
 OK    decoupling      U10   VIN(+54V)對地 128.30µF:C10 100uF, C11 4.7uF, C12 4.7uF, C13 4.7uF, C14 4.7uF, C15 4.7uF, C16 4.7uF, C17 100nF
-OK    decoupling      U20   VIN(+5V)對地 329.10µF:C30 47uF, C31 47uF, C32 47uF, C33 47uF, C34 47uF, C45 47uF, C46 47uF, C47 100nF
-設計審查:ERROR 0、WARN 0、INFO 0、OK 2
-推算出的網電壓:GND 0.00V
+OK    decoupling      U20   VIN(+5V,4.87–5.13V)對地 329.10µF:C30 47uF, C31 47uF, C32 47uF, C33 47uF, C34 47uF, C45 47uF, C46 47uF, C47 100nF
+設計審查:ERROR 0、WARN 0、INFO 0、OK 4
+推算出的網電壓:+3V3 3.23–3.44V、+5V 4.87–5.13V、GND 0.00V
