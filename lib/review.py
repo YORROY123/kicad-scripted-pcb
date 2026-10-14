@@ -48,6 +48,9 @@ SOURCES = {
     "Connector:USB_C_Receptacle_USB2.0_16P": {"VBUS": (4.40, 5.0, 5.25), "GND": (0.0, 0.0, 0.0)},
     # Raspberry Pi CM5 規格書 4.3:CM5_3.3V / CM5_1.8V 輸出 ±5%
     "CM5:CM5_J1": {"CM5_3.3V": (3.135, 3.3, 3.465), "CM5_1.8V": (1.71, 1.8, 1.89)},
+    # LAN7800 內建穩壓器(規格書 DS00001992H 第 4 章):VDD25_REG_OUT 2.5V LDO、內建降壓的 1.2V 回授網。
+    # 範圍取 16.2 Operating Conditions 對應腳的上下限
+    "CM5_Parts:LAN7800": {"VDD25_REG_OUT": (2.38, 2.5, 2.63), "VDD12_SW_FB": (1.1, 1.2, 1.26)},
     # CR2032:新品約 3.2V,放電末期約 2.5V
     "Device:Battery_Cell": {"+": (2.5, 3.0, 3.3), "-": (0.0, 0.0, 0.0)},
 }
@@ -73,6 +76,15 @@ SUPPLY_PINS = {
         "GPIO_VREF": (1.71, 3.465, None, "CM5 規格書 4.3:GPIO_VREF 接 CM5_3.3V 或 CM5_1.8V,不能浮接或接地"),
         "VBAT": (2.5, 3.5, None, "CM5 規格書 4.3:VBAT 2.5–3.5V"),
     },
+    "CM5_Parts:LAN7800": {
+        "VDD33_REG_IN": (2.97, 3.63, None, "LAN7800 規格書 16.2:2.97–3.63V"),
+        "VDD_SW_IN": (2.97, 3.63, None, "LAN7800 規格書 16.2:2.97–3.63V"),
+        "VDD33A": (2.97, 3.63, None, "LAN7800 規格書 16.2:2.97–3.63V"),
+        "VDDVARIO": (1.62, 3.63, None, "LAN7800 規格書 16.2:1.62–3.63V"),
+        "VDD25A": (2.38, 2.63, None, "LAN7800 規格書 16.2:2.38–2.63V"),
+        "VDD12A": (1.1, 1.26, None, "LAN7800 規格書 16.2:1.1–1.26V"),
+        "VDD12CORE": (1.1, 1.26, None, "LAN7800 規格書 16.2:1.1–1.26V"),
+    },
     "Regulator_Switching:TPS568230": {
         "VIN": (4.5, 18.0, 40e-6, "TPS568230 規格書 ZHCSIY3C:VIN 4.5–18V,TI 建議 VIN 去耦 40µF"),
     },
@@ -88,7 +100,8 @@ SCHOTTKY_VF = (0.3, 0.4, 0.5)          # SS34 規格書:0.5V@3A,小電流約 0.3
 GPIO_VOH = (3.1, 3.2, 3.3)             # ESP32-C3 在數 mA 時的 VOH(規格書只保證 0.8×VDD@40mA)
 OPEN_COLLECTOR_VCE = {                 # 導通時集極對地壓降
     "Transistor_Array:ULN2803A": (0.7, 0.9, 1.1),   # TI ULN2803A:VCE(sat) 0.9–1.1V @100mA
-    "CM5:CM5_J1": (0.0, 0.2, 0.4),                   # CM5 規格書:LED_nACT VOL < 0.4V(LED_nPWR 同為開汲極)
+    "CM5:CM5_J1": (0.0, 0.2, 0.4),
+    "CM5_Parts:LAN7800": (0.0, 0.2, 0.4),            # LAN7800 規格書:LED 腳 OD12,VOL 0.4V                   # CM5 規格書:LED_nACT VOL < 0.4V(LED_nPWR 同為開汲極)
 }
 INDUCTIVE = {
     # Songle SRD-05VDC-SL-C:線圈 5V / 70Ω,吸合電壓 ≤ 75% 額定
