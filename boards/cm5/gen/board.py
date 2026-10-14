@@ -7,6 +7,7 @@
   4. CM5 原生 Gigabit 網口(BCM54210PE → HR911130A MagJack)
   5. USB3 → Gigabit ×2(LAN7800)
   6. 802.3at PoE ×2(IP804AR + G2423S 變壓器 + RJHSE5380 RJ45)
+  7. USB 2.0:FSUSB42 切換 Hub(USB2514B → USB-A ×2)/ USB-C 燒錄口
 
 ──────────────── 1. 54V 輸入 → 5V / 12A ────────────────
 J20 54V 輸入 → F1(4A)→ +54V。D20(SM6T68A,VRM 58.1V)跨在 +54V 對地:
@@ -173,6 +174,7 @@ CM5_PINS = {
     15: "ETH_nACT", 17: "ETH_nSPD",
     # 5. USB3-0 → LAN7800 #0、USB3-1 → LAN7800 #1(CM5 的 TX 已含耦合電容,規格書 4.2)
     130: "CM5U0_RX_P", 128: "CM5U0_RX_N", 142: "LAN0_RX_P", 140: "LAN0_RX_N", 134: "LAN0_DP", 136: "LAN0_DM",
+    101: "USB_OTG_ID", 103: "CM5_USB_N", 105: "CM5_USB_P",   # 7. USB 2.0
     159: "CM5U1_RX_P", 157: "CM5U1_RX_N", 171: "LAN1_RX_P", 169: "LAN1_RX_N", 163: "LAN1_DP", 165: "LAN1_DM",
 }
 
@@ -194,7 +196,9 @@ add("BT50", "Device", "Battery_Cell", 304, 220, "CR2032", "Battery:BatteryHolder
     {"1": "VBAT", "2": "GND"})
 BUTTON = "Button_Switch_SMD:SW_Push_1P1T_NO_CK_KMR2"
 add("SW50", "Switch", "SW_Push", 320, 220, "POWER", BUTTON, {"1": "PWR_BUT", "2": "GND"})
-add("SW51", "Switch", "SW_Push", 336, 220, "RPIBOOT", BUTTON, {"1": "nRPIBOOT", "2": "GND"})
+# SW51 滑動開關(區塊 7):共點 B 接地;A = FLASH(nRPIBOOT 拉低)、C = RUN(USB_OTG_ID 接地 = CM5 當 host)
+add("SW51", "Switch", "SW_SPDT", 336, 220, "FLASH/RUN", "Button_Switch_SMD:SW_SPDT_PCM12",
+    {"2": "GND", "1": "nRPIBOOT", "3": "USB_OTG_ID"})
 LED0805 = "LED_SMD:LED_0805_2012Metric"
 # Device:LED 是 1 = K、2 = A
 add("D50", "Device", "LED", 356, 214, "RED", LED0805, {"2": "CM5_3V3", "1": "LED_PWR_K"})
@@ -369,5 +373,94 @@ def poe_port(i: int, x: float, y: float) -> None:
 
 poe_port(0, 500, 300)
 poe_port(1, 500, 420)
+
+# ── 7. USB 2.0:Hub ×2 埠 / USB-C 燒錄口 ────────────────────────────────
+# CM5 規格書 4.2:USB_P/USB_N(105/103)是唯一的 USB 2.0;USB_OTG_ID(101)內部上拉 = device,
+#   接地 = host(OS 也要設定:config.txt dtoverlay=dwc2,dr_mode=host,寫進韌體交接)。
+# 切換:SW51 一顆滑動開關同時決定兩件事,不會有「按鈕放開就切回 Hub」的問題:
+#   FLASH:nRPIBOOT 低 → CM5 進 rpiboot(上電 2ms 內要低,滑動開關一直保持);OTG_ID 浮接 = device;
+#          FSUSB42 Sel = nRPIBOOT = 低 → D± 接 HSD1 = USB-C 燒錄口
+#   RUN:  nRPIBOOT 由 CM5 內部 10k 拉到 CM5_3.3V = 高 → Sel 高 → HSD2 = Hub 上行;OTG_ID 接地 = host
+#   FSUSB42(Fairchild 規格書真值表:/OE 低導通,Sel 低 HSD1、高 HSD2)電源接 CM5_3V3:與 nRPIBOOT
+#   同電源域,CM5 未開機時兩者都 0V,不會倒灌。/OE 接地。JLC C11355。
+# USB-C 燒錄口:CC1/CC2 各 5.1k 下拉(device);VBUS 來自電腦,只接 ESD 的參考腳,不進本板 5V。
+#   CM5 的 CC1/CC2(94/96,給 USB-C 供電協商用)不接:本板 5V 來自 54V。
+# Hub:Microchip USB2514B(規格書 USB251xB/xBi Rev 2.2,JLC C16251)
+#   - CFG_SEL[1:0] = 00(表 5.1:預設設定、自供電、各埠獨立電源開關與過流偵測)→ 兩腳 100k 下拉;
+#     NON_REM1(SDA)100k 下拉,NON_REM0(SUSP_IND)用內部下拉 → 全部埠可拔除。
+#   - 只用 DN1、DN2;DN3、DN4 的 DP/DM 各 10k 上拉 3.3V = 埠停用(3.3 節)。
+#   - VBUS_DET:永久連接 host 的自供電 hub 接 3.3V(3.3 節)→ +3V3;RESET_N 接 PG_3V3。
+#   - RBIAS 12k 1%;CRFILT / PLLFILT 各 100nF(上限 0.1µF);24MHz 晶振 C15643 + 1M 並聯 + 27pF ×2(7.1)。
+#   - PRTPWRx(高 = 開)→ AP2171W EN(1A,JLC C110466);FLG(開汲極)→ OCS_Nx,10k 上拉。
+#     BC_EN strap 用內部下拉 = 不支援充電協議。每埠 VBUS 100µF + 100nF(USB 2.0 下游 ≥ 120µF/hub)。
+#   - 每個 USB 接頭一顆 USBLC6-2SC6(穿過式,VBUS 參考腳接該埠 VBUS)。
+add("U60", "Interface_USB", "FSUSB42MUX", 500, 205, "FSUSB42MUX", "Package_SO:MSOP-10_3x3mm_P0.5mm", {
+    "1": "CM5_3V3", "5": "GND", "10": "GND", "2": "nRPIBOOT",
+    "3": "CM5_USB_P", "4": "CM5_USB_N",
+    "7": "USBC_DP", "6": "USBC_DN", "9": "HUB_UP_DP", "8": "HUB_UP_DN",
+})
+add("C200", "Device", "C", 486, 190, "100nF", C0402, {"1": "CM5_3V3", "2": "GND"})
+add("J50", "Connector", "USB_C_Receptacle_USB2.0_16P", 455, 225, "USB-C FLASH",
+    "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12", {
+        "A4": "USBC_VBUS", "A9": "USBC_VBUS", "B4": "USBC_VBUS", "B9": "USBC_VBUS",
+        "A1": "GND", "A12": "GND", "B1": "GND", "B12": "GND", "SH": "GND",
+        "A5": "USBC_CC1", "B5": "USBC_CC2",
+        "A6": "USBC_DP", "B6": "USBC_DP", "A7": "USBC_DN", "B7": "USBC_DN",
+        "A8": None, "B8": None,
+    })
+add("R200", "Device", "R", 478, 246, "5.1k", R0402, {"1": "USBC_CC1", "2": "GND"})
+add("R201", "Device", "R", 486, 246, "5.1k", R0402, {"1": "USBC_CC2", "2": "GND"})
+USBLC6 = ("Power_Protection", "USBLC6-2SC6")
+
+
+def usblc6(ref, x, y, dp, dn, vbus):
+    add(ref, *USBLC6, x, y, "USBLC6-2SC6", "Package_TO_SOT_SMD:SOT-23-6",
+        {"1": dp, "6": dp, "3": dn, "4": dn, "5": vbus, "2": "GND"})
+
+
+usblc6("D70", 470, 175, "USBC_DP", "USBC_DN", "USBC_VBUS")
+add("U61", "Interface_USB", "USB2514B_Bi", 560, 205, "USB2514B", "Package_DFN_QFN:QFN-36-1EP_6x6mm_P0.5mm_EP3.7x3.7mm", {
+    "30": "HUB_UP_DN", "31": "HUB_UP_DP",
+    "1": "USBA0_DN", "2": "USBA0_DP", "3": "USBA1_DN", "4": "USBA1_DP",
+    "6": "HUB_DIS3", "7": "HUB_DIS3", "8": "HUB_DIS4", "9": "HUB_DIS4",
+    "5": "+3V3", "10": "+3V3", "29": "+3V3", "36": "+3V3", "15": "+3V3", "23": "+3V3",
+    "11": "GND", "37": "GND",
+    "12": "USBA0_EN", "13": "USBA0_OCN", "16": "USBA1_EN", "17": "USBA1_OCN",
+    "18": None, "19": "HUB_OCN34", "20": None, "21": "HUB_OCN34",
+    "14": "HUB_CRFILT", "34": "HUB_PLLFILT", "35": "HUB_RBIAS",
+    "33": "HUB_XI", "32": "HUB_XO",
+    "22": "HUB_NONREM1", "24": "HUB_CFG0", "25": "HUB_CFG1",
+    "26": "PG_3V3", "27": "+3V3", "28": None,
+})
+for k, (ref, a, b, val) in enumerate([
+        ("R202", "HUB_CFG0", "GND", "100k"), ("R203", "HUB_CFG1", "GND", "100k"), ("R204", "HUB_NONREM1", "GND", "100k"),
+        ("R205", "+3V3", "HUB_DIS3", "10k"), ("R206", "+3V3", "HUB_DIS4", "10k"), ("R207", "+3V3", "HUB_OCN34", "10k"),
+        ("R208", "+3V3", "USBA0_OCN", "10k"), ("R209", "+3V3", "USBA1_OCN", "10k"), ("R210", "HUB_RBIAS", "GND", "12k"),
+        ("R211", "HUB_XI", "HUB_XO", "1M")]):
+    add(ref, "Device", "R", 520 + 8 * k, 244, val, R0402, {"1": a, "2": b})
+for k, (ref, net, val, fp) in enumerate([
+        ("C201", "+3V3", "4.7uF", C0603), ("C202", "+3V3", "100nF", C0402), ("C203", "+3V3", "100nF", C0402),
+        ("C204", "+3V3", "100nF", C0402), ("C205", "+3V3", "100nF", C0402), ("C206", "HUB_CRFILT", "100nF", C0402),
+        ("C207", "HUB_PLLFILT", "100nF", C0402), ("C208", "HUB_XI", "27pF", C0402), ("C209", "HUB_XO", "27pF", C0402)]):
+    add(ref, "Device", "C", 520 + 8 * k, 257, val, fp, {"1": net, "2": "GND"})
+add("Y60", "Device", "Crystal_GND24", 625, 245, "24MHz", "Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm",
+    {"1": "HUB_XI", "3": "HUB_XO", "2": "GND", "4": "GND"})
+
+
+def usb_a(i, y):
+    v = f"USBA{i}_VBUS"
+    add(f"U{62 + i}", "Power_Management", "AP2171W", 600, y, "AP2171W", "Package_TO_SOT_SMD:SOT-23-5",
+        {"5": "+5V", "2": "GND", "4": f"USBA{i}_EN", "3": f"USBA{i}_OCN", "1": v})
+    add(f"C{210 + 3 * i}", "Device", "C", 588, y + 14, "1uF", C0402, {"1": "+5V", "2": "GND"})
+    add(f"C{211 + 3 * i}", "Device", "C_Polarized", 614, y + 14, "100uF", "Capacitor_SMD:CP_Elec_6.3x7.7",
+        {"1": v, "2": "GND"})
+    add(f"C{212 + 3 * i}", "Device", "C", 622, y + 14, "100nF", C0402, {"1": v, "2": "GND"})
+    add(f"J{51 + i}", "Connector", "USB_A", 640, y, f"USB-A {i + 1}", "Connector_USB:USB_A_Molex_48037-2200_Horizontal",
+        {"1": v, "2": f"USBA{i}_DN", "3": f"USBA{i}_DP", "4": "GND", "SH": "GND"})
+    usblc6(f"D{71 + i}", 628, y - 14, f"USBA{i}_DP", f"USBA{i}_DN", v)
+
+
+usb_a(0, 180)
+usb_a(1, 218)
 
 n.write(HERE.parent / "cm5.kicad_sch")
