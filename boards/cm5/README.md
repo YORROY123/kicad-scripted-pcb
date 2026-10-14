@@ -80,6 +80,18 @@ Raspberry Pi Compute Module 5(含 eMMC)的通用載板,目標是 JLCPCB 能直�
   (CFG_SEL = 00、埠 3/4 停用)、24MHz 晶振 C15643。每個 USB 接頭一顆 USBLC6。ERC 0、網表 977/977、審查 0 錯誤;
   review.py 加 USB2514B / FSUSB42 電源範圍、usb-esd 認得 USB-A,3 個新突變都抓到。
 
+- **原理圖區塊 8:M.2 M-key**(PCIe Gen2 ×1)。插座 TE **1-2199230-6**(M key,JLC C4710843);
+  ⚠ JLC 搜「2199230-4」會出現 E key 版本,SSD 插不進去 —— 料號表在 TE 圖面第 2 頁。
+  `gen/m2_fp.py` 照 TE 圖面第 3 頁生成封裝(含 2230/2242/2260/2280 固定柱孔),`--compare` 對官方 CM5 IO
+  封裝:訊號焊盤 67/67、機構孔位置一致(故意把下排移 0.05mm 會失敗);空板 DRC 0。
+  腳位照官方 IO 板;3.3V 直接取 +3V3(PCIE_PWR_EN 不用)。review.py 加 M.2 3.3V ±5% 規則與突變測試。
+  圖紙改 A0。
+
+### M.2 待確認
+1. **SSD 固定柱**:四個 Ø3.7 鍍通孔要配壓入式或 SMT 銅柱(M2 螺絲),料號在 PCB 階段選。
+2. **3.3V 不受 PCIE_PWR_EN 控制**:OS 無法單獨對 SSD 斷電重啟;若需要,加一顆 ≥ 3A 負載開關。
+3. PCIe 走線:90Ω 差分、對內等長 0.1mm(CM5 規格書 2.3.1)。
+
 ### USB 區塊待確認
 1. **韌體**:RUN 位置 OTG_ID 接地後,config.txt 仍要 `dtoverlay=dwc2,dr_mode=host` —— 寫進韌體交接。
 2. **USB2514B 的 SUSP_IND/LOCAL_PWR**:浮接(內部下拉 = 埠可拔除),但 LOCAL_PWR 讀到低可能讓 hub 回報匯流排供電;
