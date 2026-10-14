@@ -6602,10 +6602,6 @@
 		(at 46.99 91.44)
 		(uuid 31dfc0ce-b824-40bd-b001-9a45f9c0f65d)
 	)
-	(no_connect
-		(at 134.62 38.1)
-		(uuid 2b45a853-aebe-4228-ac33-4d801b153065)
-	)
 	(global_label "VBUS"
 		(shape input)
 		(at 49.53 60.96 0)

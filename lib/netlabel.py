@@ -56,7 +56,10 @@ class NetLabeler:
                 continue
             seen.add(xy)
             if net is None:
-                self.s.no_connect(part, pin)
+                # 腳本身的電氣類型就是 no_connect(規格書的 NC 腳)時不再加 NC 標記:
+                # KiCad 不需要,而且偶爾會把它報成 no_connect_dangling(cm5 的 IP804AR 第 18 腳)
+                if part._pins[pin]["electrical"] != "no_connect":
+                    self.s.no_connect(part, pin)
                 continue
             ox, oy = outward(part, pin)
             self.s.label(net, part, pin, dx=ox * STUB, dy=oy * STUB,
