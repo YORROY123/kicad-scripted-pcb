@@ -5,6 +5,7 @@
   2. 5V → 3.3V / 8A(TPS568230)
   3. CM5 連接器:電源腳、GPIO_VREF、RTC 電池、電源鍵、nRPIBOOT、電源/活動燈
   4. CM5 原生 Gigabit 網口(BCM54210PE → HR911130A MagJack)
+  5. USB3 → Gigabit ×2(LAN7800);MDI 先打 NC,區塊 6(PoE 變壓器、IP804AR、RJ45)再接
 
 ──────────────── 1. 54V 輸入 → 5V / 12A ────────────────
 J20 54V 輸入 → F1(4A)→ +54V。D20(SM6T68A,VRM 58.1V)跨在 +54V 對地:
@@ -169,6 +170,9 @@ CM5_PINS = {
     12: "ETH0_P", 10: "ETH0_N", 4: "ETH1_P", 6: "ETH1_N",
     11: "ETH2_P", 9: "ETH2_N", 3: "ETH3_P", 5: "ETH3_N",
     15: "ETH_nACT", 17: "ETH_nSPD",
+    # 5. USB3-0 → LAN7800 #0、USB3-1 → LAN7800 #1(CM5 的 TX 已含耦合電容,規格書 4.2)
+    130: "CM5U0_RX_P", 128: "CM5U0_RX_N", 142: "LAN0_RX_P", 140: "LAN0_RX_N", 134: "LAN0_DP", 136: "LAN0_DM",
+    159: "CM5U1_RX_P", 157: "CM5U1_RX_N", 171: "LAN1_RX_P", 169: "LAN1_RX_N", 163: "LAN1_DP", 165: "LAN1_DM",
 }
 
 
@@ -219,5 +223,73 @@ for ref, x, (a_p, a_n), (b_p, b_n) in (("U30", 520, ("ETH1_P", "ETH1_N"), ("ETH0
             "3": "GND", "8": "GND"})
 add("R60", "Device", "R", 600, 100, "470", R0402, {"1": "ETH_LEDG_K", "2": "ETH_nACT"})
 add("R61", "Device", "R", 600, 116, "470", R0402, {"1": "ETH_LEDY_K", "2": "ETH_nSPD"})
+
+# ── 5. USB3 → Gigabit ×2(LAN7800)──────────────────────────────────────
+# Microchip LAN7800 規格書 DS00001992H(以下簡稱規格書):
+#   - 電源(第 4 章圖 4-1):3.3V 腳全接 +3V3(VDDVARIO 也用 3.3V,I/O 為 3.3V);
+#     內建 1.2V 降壓:VDD12_SW_OUT → 3.3µH → 1.2V 網,VDD12_SW_FB 接 1.2V 網,10µF;
+#     內建 2.5V LDO:VDD25_REG_OUT 1µF,供四支 VDD25A。工作範圍 16.2:3.3V 腳 2.97–3.63V。
+#     每顆約 256mA(16.4,最大工作模式),兩顆約 0.5A,由 +3V3(8A)供。
+#   - REF_REXT 2k 1%、REF_FILT 1µF、USBRBIAS 12k 1%(表 3-2)。
+#   - 25MHz 晶振(16.7):總誤差 ±45ppm 內 → Yangxing X322525MSB4SI(C13740,±10 + ±20ppm、
+#     ESR 50Ω、CL 20pF);負載電容 2 ×(20 − 雜散約 5)≈ 30pF → 27pF。實物要量頻率。
+#   - USB3:LAN7800 的 TX 要加 100nF 耦合電容(USB 3 規範 75–265nF,放在發送端);
+#     CM5 的 TX 已含電容,直接接 LAN7800 RX。USB2(DP/DM)也要接,USB3 列舉要靠它。
+#   - VBUS_DET 接 3.3V(表 3-2:bus-powered 接 VDD33A);RESET_N 接 PG_3V3(+3V3 正常才放開);
+#     TEST 接地;不接 EEPROM:MAC 寫進晶片 OTP(Linux lan78xx 可用 ethtool -E 寫),
+#     EEDI 10k 下拉讓 EEPROM 偵測讀到 00(不是 A5h);PME_MODE 10k 下拉;其餘 GPIO 不接。
+#   - LED0 / LED1(與 EECLK/EEDO 共用)預設低電位有效 → 綠 / 黃燈經 470Ω,陽極接 +3V3。
+#     ⚠ 沒有 EEPROM/OTP 設定時 LED 腳是否預設啟用,要看 lan78xx 驅動(寫進待確認)。
+#   - 庫存風險:LAN7800/Y9X(C633489)JLC 只剩 89 顆,打樣足夠;量產前要另找料源。
+flag("+3V3", 40, 260)      # 由電感(被動)輸出,LAN7800 的 3.3V 電源腳需要 ERC 知道它有供電
+C0805 = "Capacitor_SMD:C_0805_2012Metric"
+
+
+def lan7800(i: int, x: float, y: float) -> None:
+    u, ref = f"LAN{i}", lambda base: base + 30 * i   # LAN0 用 1xx–121、LAN1 用 130–151
+    add(f"U{40 + i}", "CM5_Parts", "LAN7800", x, y, "LAN7800/Y9X",
+        "Package_DFN_QFN:QFN-48-1EP_7x7mm_P0.5mm_EP5.3x5.3mm", {
+            "46": "+3V3", "14": "+3V3", "38": "+3V3", "20": "+3V3", "36": "+3V3", "39": "+3V3",
+            "45": f"{u}_2V5", "3": f"{u}_2V5", "6": f"{u}_2V5", "9": f"{u}_2V5", "12": f"{u}_2V5",
+            "13": f"{u}_SW", "15": f"{u}_1V2", "21": f"{u}_1V2", "42": f"{u}_1V2",
+            "25": f"{u}_1V2", "30": f"{u}_1V2", "44": f"{u}_1V2",
+            "47": f"{u}_REXT", "48": f"{u}_FILT", "37": f"{u}_RBIAS", "40": f"{u}_XI", "41": f"{u}_XO",
+            # MDI:區塊 6 接 PoE 變壓器
+            "1": None, "2": None, "4": None, "5": None, "7": None, "8": None, "10": None, "11": None,
+            "26": f"{u}_DP", "27": f"{u}_DM", "28": f"{u}_TX_P", "29": f"{u}_TX_N",
+            "31": f"{u}_RX_P", "32": f"{u}_RX_N",
+            "23": "+3V3", "35": "PG_3V3", "34": "GND", "16": None, "17": f"{u}_EEDI",
+            "18": f"{u}_LEDG_K", "19": f"{u}_LEDY_K", "24": None, "33": None, "22": None,
+            "43": f"{u}_PMEMODE", "49": "GND",
+        })
+    flag(f"{u}_1V2", x - 40, y + 10)          # 1.2V 由電感輸出
+    cx = x - 60
+    for k, (net, val, fp) in enumerate([("+3V3", "10uF", C0805)] + [("+3V3", "100nF", C0402)] * 4
+                                       + [(f"{u}_2V5", "1uF", C0402)] + [(f"{u}_2V5", "100nF", C0402)] * 4
+                                       + [(f"{u}_1V2", "10uF", C0805)] + [(f"{u}_1V2", "100nF", C0402)] * 5):
+        add(f"C{ref(100) + k}", "Device", "C", cx + 7 * (k % 8), y - 40 + 14 * (k // 8), val, fp,
+            {"1": net, "2": "GND"})
+    add(f"L{40 + i}", "Device", "L", cx, y + 30, "3.3uH", "Inductor_SMD:L_1008_2520Metric",
+        {"1": f"{u}_SW", "2": f"{u}_1V2"})
+    add(f"R{ref(100)}", "Device", "R", cx + 10, y + 30, "2k", R0402, {"1": f"{u}_REXT", "2": "GND"})
+    add(f"C{ref(117)}", "Device", "C", cx + 18, y + 30, "1uF", C0402, {"1": f"{u}_FILT", "2": "GND"})
+    add(f"R{ref(101)}", "Device", "R", cx + 26, y + 30, "12k", R0402, {"1": f"{u}_RBIAS", "2": "GND"})
+    add(f"Y{40 + i}", "Device", "Crystal_GND24", cx + 10, y + 46, "25MHz",
+        "Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm",
+        {"1": f"{u}_XI", "3": f"{u}_XO", "2": "GND", "4": "GND"})
+    add(f"C{ref(118)}", "Device", "C", cx, y + 56, "27pF", C0402, {"1": f"{u}_XI", "2": "GND"})
+    add(f"C{ref(119)}", "Device", "C", cx + 20, y + 56, "27pF", C0402, {"1": f"{u}_XO", "2": "GND"})
+    add(f"R{ref(102)}", "Device", "R", x + 40, y + 20, "10k", R0402, {"1": f"{u}_EEDI", "2": "GND"})
+    add(f"R{ref(103)}", "Device", "R", x + 48, y + 20, "10k", R0402, {"1": f"{u}_PMEMODE", "2": "GND"})
+    add(f"C{ref(120)}", "Device", "C", x + 40, y - 6, "100nF", C0402, {"1": f"{u}_TX_P", "2": f"CM5U{i}_RX_P"})
+    add(f"C{ref(121)}", "Device", "C", x + 48, y - 6, "100nF", C0402, {"1": f"{u}_TX_N", "2": f"CM5U{i}_RX_N"})
+    add(f"D{40 + 2 * i}", "Device", "LED", x + 60, y + 14, "GREEN", LED0805, {"2": "+3V3", "1": f"{u}_LEDG_K2"})
+    add(f"R{ref(104)}", "Device", "R", x + 60, y + 28, "470", R0402, {"1": f"{u}_LEDG_K2", "2": f"{u}_LEDG_K"})
+    add(f"D{41 + 2 * i}", "Device", "LED", x + 78, y + 14, "YELLOW", LED0805, {"2": "+3V3", "1": f"{u}_LEDY_K2"})
+    add(f"R{ref(105)}", "Device", "R", x + 78, y + 28, "470", R0402, {"1": f"{u}_LEDY_K2", "2": f"{u}_LEDY_K"})
+
+
+lan7800(0, 140, 290)
+lan7800(1, 140, 400)
 
 n.write(HERE.parent / "cm5.kicad_sch")
