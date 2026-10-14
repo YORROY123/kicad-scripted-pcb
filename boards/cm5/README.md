@@ -56,6 +56,13 @@ Raspberry Pi Compute Module 5(含 eMMC)的通用載板,目標是 JLCPCB 能直�
   採標註值 13.25,並用 `--compare` 對 KiCad 內建同系列 HR911105A 的定位柱、LED 腳、屏蔽腳(一致;
   故意改成圖上量到的 12.7 會失敗)。單獨擺在空板、每焊盤不同網路,DRC 只剩兩支 SH 未連線(預期)。
 
+- **原理圖區塊 5:USB3 → Gigabit ×2(LAN7800)**。CM5 USB3-0 / USB3-1(含各自的 USB2 對)→ 兩顆 LAN7800。
+  照規格書 DS00001992H:3.3V 腳接 +3V3、內建 1.2V 降壓(3.3µH + 10µF)與 2.5V LDO(1µF)、REF_REXT 2k、
+  REF_FILT 1µF、USBRBIAS 12k、25MHz 晶振(C13740,±30ppm)+ 27pF;LAN7800 TX → 100nF → CM5 RX
+  (CM5 TX 已含電容);RESET_N 接 PG_3V3;不接 EEPROM,MAC 寫 OTP;LED0/LED1 → 綠 / 黃燈。
+  **MDI(TR0–TR3)暫時 NC**,區塊 6 接 PoE 變壓器。符號 `gen/parts_sym.py` 對規格書圖 3-1 自動比對 48/48。
+  review.py 加 LAN7800 電源範圍與內建穩壓器輸出,3 個突變測試(1.2V/2.5V 接錯、3.3V 腳接 5V)都抓到。
+
 ### 電源區塊待確認
 1. **電感封裝**:目前暫填 `L_Bourns_SRP1050WA`,要依 TDK SPM10065VT 的規格書焊盤圖另做(可用 Pi 轉圖)。
 2. **LM5146 裸露焊盤尺寸**:LCSC 的規格書只有封裝總覽頁,沒有 RGY0020 詳圖;
@@ -65,6 +72,11 @@ Raspberry Pi Compute Module 5(含 eMMC)的通用載板,目標是 JLCPCB 能直�
 8. **LED_nPWR**:規格書說要加緩衝,官方 IO 板仍直接帶 1k(約 1mA),照官方;料號核對後看 review 的電流結果。
 10. **網口走線**:4 對 100Ω 差分、對內等長;CM5 規格書 4.2 附模組內部各腳走線長度(Pair0_P 2.92mm 等),
    等長要把它算進去。MagJack 前方要靠板邊。LED 最壞(Vf 2.8V、VOL 0.4V)電流接近 0,實際約 2mA。
+11. **LAN7800 庫存**:JLC C633489 只剩 89 顆(打樣夠);量產前另找料源或改用規格書公開的替代晶片。
+12. **LAN7800 LED**:沒有 EEPROM / OTP 設定時 LED0/LED1 是否預設啟用,要對 Linux lan78xx 驅動;
+    必要時在 OTP 寫 LED 設定。MAC 寫 OTP 的流程寫進韌體交接。
+13. **LAN7800 封裝**:KiCad `QFN-48-1EP_7x7mm_P0.5mm_EP5.3x5.3mm` 焊盤寬 0.25,規格書建議 0.28(晶片腳 0.18–0.30),
+    排距 6.9、EP 5.3 一致。1.2V 電感 MPIH252012-3R3M(C490457)電流額定要對 LAN7800 1.2V 負載確認。
 9. **CM5_1V8** 目前沒有負載(只有兩支輸出腳互接),之後用不到就維持這樣。
 6. **TPS568230 封裝**:KiCad 內建 `Texas_RJE0020A`(EP 0.675 × 0.76mm,多塊散熱焊盤)要對 TI 原始 RJE 圖面;
    JLC 標 VQFN-20-EP(3x3)。

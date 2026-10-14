@@ -92,6 +92,9 @@ CASES = [
     ("cm5", "decoupling", "U20", "+5V 的 47µF 全拿掉,只剩 100nF(TI 建議 VIN 40µF)",
      lambda nl: [remove(nl, r) for r in ("C30", "C31", "C32", "C33", "C34", "C45", "C46", "C50")]),
     ("cm5", "rail-range", "J1", "GPIO_VREF 接地(CM5 規格書:不能浮接或接地)", lambda nl: move(nl, "J1", "78", "GND")),
+    ("cm5", "rail-range", "U40", "LAN7800 的 VDD12A 接到 2.5V 網", lambda nl: move(nl, "U40", "25", "LAN0_2V5")),
+    ("cm5", "rail-range", "U41", "LAN7800 的 VDD25A 接到 1.2V 網", lambda nl: move(nl, "U41", "3", "LAN1_1V2")),
+    ("cm5", "rail-range", "U40", "LAN7800 的 VDD33A 接到 +5V", lambda nl: move(nl, "U40", "38", "+5V")),
     ("cm5", "rail-range", "J1", "CM5 的 5V 腳接到 +3V3", lambda nl: [move(nl, "J1", p, "+3V3") for p in ("77", "79")]),
 ]
 

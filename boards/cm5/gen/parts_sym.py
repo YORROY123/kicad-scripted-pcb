@@ -71,7 +71,68 @@ HR911130A = dict(
     ],
 )
 
-PARTS = [LM5146, HR911130A]
+# Microchip LAN7800 規格書 DS00001992H 圖 3-1(48-SQFN 7×7,Y9X)。49 = 封裝 EP(VSS)
+# LED0/LED1 與 EEPROM 共用腳(EEDO/EECLK);本板不接 EEPROM(MAC 存 OTP),兩腳當 LED。
+# LED 腳預設低電位有效、開汲極(9.3 LED Interface)→ open_collector,review.py 才算得出電流。
+LAN7800 = dict(
+    name="LAN7800", ref="U", half_w=15.24, rows=27,
+    footprint="Package_DFN_QFN:QFN-48-1EP_7x7mm_P0.5mm_EP5.3x5.3mm",
+    datasheet="https://ww1.microchip.com/downloads/aemDocuments/documents/UNG/ProductDocuments/DataSheets/LAN7800-Data-Sheet-DS00001992H.pdf",
+    desc="USB 3.1 Gen 1 to 10/100/1000 Ethernet bridge, 48-SQFN 7x7",
+    pins=[
+        ("46", "VDD33_REG_IN", "power_in", "L", 0),
+        ("14", "VDD_SW_IN", "power_in", "L", 1),
+        ("38", "VDD33A", "power_in", "L", 2),
+        ("20", "VDDVARIO", "power_in", "L", 3),
+        ("36", "VDDVARIO", "power_in", "L", 4),
+        ("39", "VDDVARIO", "power_in", "L", 5),
+        ("45", "VDD25_REG_OUT", "power_out", "L", 7),
+        ("3", "VDD25A", "power_in", "L", 8),
+        ("6", "VDD25A", "power_in", "L", 9),
+        ("9", "VDD25A", "power_in", "L", 10),
+        ("12", "VDD25A", "power_in", "L", 11),
+        ("13", "VDD12_SW_OUT", "passive", "L", 13),
+        ("15", "VDD12_SW_FB", "passive", "L", 14),
+        ("21", "VDD12CORE", "power_in", "L", 15),
+        ("42", "VDD12CORE", "power_in", "L", 16),
+        ("25", "VDD12A", "power_in", "L", 17),
+        ("30", "VDD12A", "power_in", "L", 18),
+        ("44", "VDD12A", "power_in", "L", 19),
+        ("47", "REF_REXT", "passive", "L", 21),
+        ("48", "REF_FILT", "passive", "L", 22),
+        ("37", "USBRBIAS", "passive", "L", 23),
+        ("40", "XI", "passive", "L", 25),
+        ("41", "XO", "passive", "L", 26),
+        ("1", "TR0P", "passive", "R", 0),
+        ("2", "TR0N", "passive", "R", 1),
+        ("4", "TR1P", "passive", "R", 2),
+        ("5", "TR1N", "passive", "R", 3),
+        ("7", "TR2P", "passive", "R", 4),
+        ("8", "TR2N", "passive", "R", 5),
+        ("10", "TR3P", "passive", "R", 6),
+        ("11", "TR3N", "passive", "R", 7),
+        ("26", "USB2_DP", "passive", "R", 9),
+        ("27", "USB2_DM", "passive", "R", 10),
+        ("28", "USB3_TXDP", "passive", "R", 11),
+        ("29", "USB3_TXDM", "passive", "R", 12),
+        ("31", "USB3_RXDP", "passive", "R", 13),
+        ("32", "USB3_RXDM", "passive", "R", 14),
+        ("23", "VBUS_DET", "input", "R", 16),
+        ("35", "RESET_N/PME_CLEAR", "input", "R", 17),
+        ("34", "TEST", "input", "R", 18),
+        ("16", "EECS/GPIO0", "passive", "R", 19),
+        ("17", "EEDI/GPIO1", "passive", "R", 20),
+        ("18", "EEDO/LED0/GPIO2", "open_collector", "R", 21),
+        ("19", "EECLK/LED1/GPIO3", "open_collector", "R", 22),
+        ("24", "SUSPEND_N/LED2/GPIO5", "passive", "R", 23),
+        ("33", "LED3/GPIO6", "passive", "R", 24),
+        ("22", "PME_N/GPIO4", "passive", "R", 25),
+        ("43", "PME_MODE/GPIO7", "passive", "R", 26),
+        ("49", "VSS", "power_in", "B", 0),
+    ],
+)
+
+PARTS = [LM5146, HR911130A, LAN7800]
 
 
 def font() -> str:
