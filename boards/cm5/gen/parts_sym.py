@@ -46,7 +46,32 @@ LM5146 = dict(
     ],
 )
 
-PARTS = [LM5146]
+# Hanrun HR911130A 規格書(LCSC C54408)第 1 頁 Schematics;SH = 兩支屏蔽卡腳(封裝焊盤號 SH)
+HR911130A = dict(
+    name="HR911130A", ref="J", half_w=10.16, rows=9,
+    footprint="CM5:RJ45_Hanrun_HR911130A_Horizontal",
+    datasheet="https://www.lcsc.com/product-detail/C54408.html",
+    desc="RJ45 with 1000Base-T magnetics and green/yellow LEDs",
+    pins=[
+        ("2", "MDI0+", "passive", "L", 0),
+        ("3", "MDI0-", "passive", "L", 1),
+        ("4", "MDI1+", "passive", "L", 2),
+        ("7", "MDI1-", "passive", "L", 3),
+        ("5", "MDI2+", "passive", "L", 4),
+        ("6", "MDI2-", "passive", "L", 5),
+        ("8", "MDI3+", "passive", "L", 6),
+        ("9", "MDI3-", "passive", "L", 7),
+        ("1", "CT", "passive", "L", 8),
+        ("11", "LEDG_A", "passive", "R", 0),
+        ("12", "LEDG_K", "passive", "R", 1),
+        ("14", "LEDY_A", "passive", "R", 3),
+        ("13", "LEDY_K", "passive", "R", 4),
+        ("10", "CHS", "passive", "B", 0),
+        ("SH", "SHIELD", "passive", "B", 1),
+    ],
+)
+
+PARTS = [LM5146, HR911130A]
 
 
 def font() -> str:
