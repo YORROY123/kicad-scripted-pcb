@@ -97,6 +97,7 @@ CASES = [
     ("cm5", "rail-range", "U50", "IP804AR 的 V54 接到 +5V(PoE 至少要 50V)", lambda nl: move(nl, "U50", "17", "+5V")),
     ("cm5", "decoupling", "U50", "拿掉 IP804AR 的 V54 電容(1µF + 47µF)",
      lambda nl: [remove(nl, r) for r in ("C82", "C83", "C10", "C11", "C12", "C13", "C14", "C15", "C16", "C17")]),
+    ("cm5", "rail-range", "J60", "M.2 的 3.3V 腳接到 +5V", lambda nl: [move(nl, "J60", p, "+5V") for p in ("2", "4")]),
     ("cm5", "rail-range", "U60", "FSUSB42 的 VCC 接到 +5V", lambda nl: move(nl, "U60", "1", "+5V")),
     ("cm5", "rail-range", "U61", "USB2514B 的 VDD33 接到 +5V", lambda nl: move(nl, "U61", "15", "+5V")),
     ("cm5", "usb-c-sink", "J50", "燒錄口 CC2 併到 CC1", lambda nl: move(nl, "J50", "B5", "USBC_CC1")),
