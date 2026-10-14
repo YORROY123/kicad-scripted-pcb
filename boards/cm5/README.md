@@ -87,6 +87,14 @@ Raspberry Pi Compute Module 5(含 eMMC)的通用載板,目標是 JLCPCB 能直�
   腳位照官方 IO 板;3.3V 直接取 +3V3(PCIE_PWR_EN 不用)。review.py 加 M.2 3.3V ±5% 規則與突變測試。
   圖紙改 A0。
 
+- **原理圖區塊 9:HDMI0**(Molex 208658-1001,C916313):照官方 IO 板直連;HDMI 5V 經 TPS2051C
+  (C129581,EN 接 CM5_3V3)。⚠ TPS2051C 限流上限略高於 HDMI 規範的 0.5A,待確認;官方也沒加 HDMI ESD。
+- **原理圖區塊 10:40-pin GPIO + 風扇**。GPIO0–27 全部拉到 2×20 排針,用程式對官方 J8 逐腳比對 40/40;
+  風扇 JST SH 4P(C160404,與樹莓派主動散熱器相容):5V / PWM(10k 上拉)/ GND / TACHO。
+- **原理圖完成**:ERC 0、網表 1126/1126、設計審查 0 錯誤(6 個 WARN 是 LED 缺 Vf,料號核對後消失)。
+  CM5 刻意不接的 57 支腳:MIPI0/1(相機、螢幕)、HDMI1、SD 介面(用 eMMC 版)、SCL0/SDA0、CAM_GPIO、
+  CC1/CC2、VBUS_EN(USB3 接 LAN7800,不供電)、PCIE_PWR_EN、PMIC_Enable、EEPROM_nWP、WL/BT_nDisable、SYNC_OUT。
+
 ### M.2 待確認
 1. **SSD 固定柱**:四個 Ø3.7 鍍通孔要配壓入式或 SMT 銅柱(M2 螺絲),料號在 PCB 階段選。
 2. **3.3V 不受 PCIE_PWR_EN 控制**:OS 無法單獨對 SSD 斷電重啟;若需要,加一顆 ≥ 3A 負載開關。
