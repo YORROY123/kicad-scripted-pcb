@@ -334,7 +334,7 @@
 					)
 				)
 			)
-			(pin passive line
+			(pin open_collector line
 				(at -27.939999999999998 44.45 0)
 				(length 2.54)
 				(name "Ethernet_nLED3"
@@ -370,7 +370,7 @@
 					)
 				)
 			)
-			(pin passive line
+			(pin open_collector line
 				(at -27.939999999999998 41.91 0)
 				(length 2.54)
 				(name "Ethernet_nLED2"

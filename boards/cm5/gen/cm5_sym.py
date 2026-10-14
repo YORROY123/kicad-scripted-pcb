@@ -57,7 +57,7 @@ def etype(name: str, pin: int = 0) -> str:
     if name in ("CM5_3.3V", "CM5_1.8V"):
         # 每路兩支腳(84/86、88/90)是同一個輸出;兩支都標 power_out,ERC 會當成兩個電源互接
         return "power_out" if pin in (84, 88) else "passive"
-    if name in ("LED_nPWR", "LED_nACT"):   # 模組內是開汲極拉低(VOL < 0.4V),review.py 的 led-current 要知道
+    if name in ("LED_nPWR", "LED_nACT", "Ethernet_nLED2", "Ethernet_nLED3"):   # 模組內是開汲極拉低(VOL < 0.4V),review.py 的 led-current 要知道
         return "open_collector"
     return "passive"
 

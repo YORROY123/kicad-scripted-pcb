@@ -4,6 +4,7 @@
   1. 54V 輸入與 5V 主電源(LM5146)
   2. 5V → 3.3V / 8A(TPS568230)
   3. CM5 連接器:電源腳、GPIO_VREF、RTC 電池、電源鍵、nRPIBOOT、電源/活動燈
+  4. CM5 原生 Gigabit 網口(BCM54210PE → HR911130A MagJack)
 
 ──────────────── 1. 54V 輸入 → 5V / 12A ────────────────
 J20 54V 輸入 → F1(4A)→ +54V。D20(SM6T68A,VRM 58.1V)跨在 +54V 對地:
@@ -164,6 +165,10 @@ RAIL = {"GND": "GND", "5V": "+5V", "CM5_3.3V": "CM5_3V3", "CM5_1.8V": "CM5_1V8"}
 CM5_PINS = {
     76: "VBAT", 78: "CM5_3V3",               # GPIO_VREF
     92: "PWR_BUT", 93: "nRPIBOOT", 95: "LED_nPWR", 21: "LED_nACT",
+    # 4. 網口(規格書 4.2:Pair0–3 直接接變壓器或 MagJack)
+    12: "ETH0_P", 10: "ETH0_N", 4: "ETH1_P", 6: "ETH1_N",
+    11: "ETH2_P", 9: "ETH2_N", 3: "ETH3_P", 5: "ETH3_N",
+    15: "ETH_nACT", 17: "ETH_nSPD",
 }
 
 
@@ -191,5 +196,28 @@ add("D50", "Device", "LED", 356, 214, "RED", LED0805, {"2": "CM5_3V3", "1": "LED
 add("R50", "Device", "R", 356, 228, "1k", R0402, {"1": "LED_PWR_K", "2": "LED_nPWR"})
 add("D51", "Device", "LED", 372, 214, "GREEN", LED0805, {"2": "CM5_3V3", "1": "LED_ACT_K"})
 add("R51", "Device", "R", 372, 228, "1k", R0402, {"1": "LED_ACT_K", "2": "LED_nACT"})
+
+# ── 4. 原生 Gigabit 網口 ───────────────────────────────────────────────
+# 照官方 CM5 IO 板(rev 2 KiCad 檔):Pair0–3 直接接 MagJack,每兩對一顆 TPD4EUSB30 ESD
+# (直通式:1↔10、2↔9、4↔7、5↔6 接同一條線,走線從腳下穿過);晶片側中心抽頭 100nF 對地。
+# MagJack:Hanrun HR911130A(JLC C54408)。10 腳經內部 1000pF/2kV 接纜線側 75Ω 終端 → 接 GND;
+# 屏蔽卡腳也接 GND(本板不另分機殼地)。
+# LED(規格書 4.2):nLED3 = 活動燈(綠)、nLED2 = 速度燈(黃,1G / 100M 連線時亮),
+# 開汲極 IOL 8mA @ VOL < 0.4V;照官方 IO 板 470Ω,陽極接 CM5_3V3(約 2mA)。
+add("J30", "CM5_Parts", "HR911130A", 560, 110, "HR911130A", "CM5:RJ45_Hanrun_HR911130A_Horizontal", {
+    "2": "ETH0_P", "3": "ETH0_N", "4": "ETH1_P", "7": "ETH1_N",
+    "5": "ETH2_P", "6": "ETH2_N", "8": "ETH3_P", "9": "ETH3_N",
+    "1": "ETH_CT", "10": "GND", "SH": "GND",
+    "11": "CM5_3V3", "12": "ETH_LEDG_K", "14": "CM5_3V3", "13": "ETH_LEDY_K",
+})
+add("C60", "Device", "C", 530, 150, "100nF", C0402, {"1": "ETH_CT", "2": "GND"})
+for ref, x, (a_p, a_n), (b_p, b_n) in (("U30", 520, ("ETH1_P", "ETH1_N"), ("ETH0_N", "ETH0_P")),
+                                      ("U31", 520, ("ETH3_P", "ETH3_N"), ("ETH2_N", "ETH2_P"))):
+    add(ref, "Power_Protection", "TPD4EUSB30", x, 80 if ref == "U30" else 120, "TPD4EUSB30",
+        "Package_SON:USON-10_2.5x1.0mm_P0.5mm", {
+            "1": a_p, "10": a_p, "2": a_n, "9": a_n, "4": b_p, "7": b_p, "5": b_n, "6": b_n,
+            "3": "GND", "8": "GND"})
+add("R60", "Device", "R", 600, 100, "470", R0402, {"1": "ETH_LEDG_K", "2": "ETH_nACT"})
+add("R61", "Device", "R", 600, 116, "470", R0402, {"1": "ETH_LEDY_K", "2": "ETH_nSPD"})
 
 n.write(HERE.parent / "cm5.kicad_sch")
