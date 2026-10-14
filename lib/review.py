@@ -85,6 +85,9 @@ SUPPLY_PINS = {
         "VDD12A": (1.1, 1.26, None, "LAN7800 規格書 16.2:1.1–1.26V"),
         "VDD12CORE": (1.1, 1.26, None, "LAN7800 規格書 16.2:1.1–1.26V"),
     },
+    "CM5_Parts:IP804AR": {
+        "V54": (50.0, 57.0, 1e-6, "IP804AR 規格書 7.2:802.3at 模式 V54 50–57V;表 1:V54 加 1µF + 47µF/100V"),
+    },
     "Regulator_Switching:TPS568230": {
         "VIN": (4.5, 18.0, 40e-6, "TPS568230 規格書 ZHCSIY3C:VIN 4.5–18V,TI 建議 VIN 去耦 40µF"),
     },
@@ -238,8 +241,10 @@ def range_attr(s: str | None):
 
 # ── 審查 ────────────────────────────────────────────────────────────────
 class Review:
-    def __init__(self, nl: Netlist, parts: dict, waivers: dict):
+    def __init__(self, nl: Netlist, parts: dict, waivers: dict, rails: dict | None = None):
         self.nl, self.parts, self.waivers = nl, parts, waivers
+        # <板目錄>/rails.json:從接頭進來、推算不出的電源 {"網": [最低, 標稱, 最高, "出處"]}
+        self.rails = rails or {}
         self.findings: list[tuple[str, str, str, str]] = []   # (等級, 規則, 位號, 訊息)
         self.v: dict[str, tuple] = {}
         self.load: dict[str, list[tuple[float, str]]] = {}     # 網 → [(A, 說明)]
@@ -268,6 +273,9 @@ class Review:
 
         if "GND" in nl.nets:
             put("GND", (0.0, 0.0, 0.0))
+        for net, spec in self.rails.items():
+            if net in nl.nets:
+                put(net, tuple(float(x) for x in spec[:3]))
         for ref, c in nl.comps.items():
             for name, r in SOURCES.get(c["lib_id"], {}).items():
                 for p in nl.by_name(ref, name):
@@ -787,7 +795,9 @@ def main() -> int:
     parts = json.loads(chk.read_text(encoding="utf-8"))["parts"] if chk.exists() else {}
     wf = bdir / "review-waivers.json"
     waivers = json.loads(wf.read_text(encoding="utf-8")) if wf.exists() else {}
-    rv = Review(nl, parts, waivers)
+    rf = bdir / "rails.json"
+    rails = json.loads(rf.read_text(encoding="utf-8")) if rf.exists() else {}
+    rv = Review(nl, parts, waivers, rails)
     rv.run()
     used = {f"{r}|{ref}" for _, r, ref, _ in rv.findings}
     for k in sorted(set(waivers) - used):
