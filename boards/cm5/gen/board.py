@@ -9,6 +9,7 @@
   6. 802.3at PoE ×2(IP804AR + G2423S 變壓器 + RJHSE5380 RJ45)
   7. USB 2.0:FSUSB42 切換 Hub(USB2514B → USB-A ×2)/ USB-C 燒錄口
   8. M.2 M-key(PCIe Gen2 ×1,NVMe 2230–2280)
+  9. HDMI0(Type A)
 
 ──────────────── 1. 54V 輸入 → 5V / 12A ────────────────
 J20 54V 輸入 → F1(4A)→ +54V。D20(SM6T68A,VRM 58.1V)跨在 +54V 對地:
@@ -176,6 +177,10 @@ CM5_PINS = {
     # 5. USB3-0 → LAN7800 #0、USB3-1 → LAN7800 #1(CM5 的 TX 已含耦合電容,規格書 4.2)
     130: "CM5U0_RX_P", 128: "CM5U0_RX_N", 142: "LAN0_RX_P", 140: "LAN0_RX_N", 134: "LAN0_DP", 136: "LAN0_DM",
     101: "USB_OTG_ID", 103: "CM5_USB_N", 105: "CM5_USB_P",   # 7. USB 2.0
+    # 9. HDMI0(HDMI1 不用,打 NC)
+    170: "HDMI0_D2_P", 172: "HDMI0_D2_N", 176: "HDMI0_D1_P", 178: "HDMI0_D1_N",
+    182: "HDMI0_D0_P", 184: "HDMI0_D0_N", 188: "HDMI0_CK_P", 190: "HDMI0_CK_N",
+    199: "HDMI0_SDA", 200: "HDMI0_SCL", 151: "HDMI0_CEC", 153: "HDMI0_HPD",
     # 8. PCIe(PCIE_PWR_EN 不用:M.2 的 3.3V 直接取 +3V3,見區塊 8)
     102: "PCIE_nCLKREQ", 104: "PCIE_nWAKE", 109: "PCIE_nRST", 110: "PCIE_CLK_P", 112: "PCIE_CLK_N",
     116: "PCIE_RX_P", 118: "PCIE_RX_N", 122: "PCIE_TX_P", 124: "PCIE_TX_N",
@@ -491,5 +496,23 @@ add("J60", "Connector", "Bus_M.2_Socket_M", 720, 120, "M.2 M-key", "CM5:M.2_Sock
 })
 for k, (ref, val, fp) in enumerate([("C220", "47uF", C1210), ("C221", "47uF", C1210), ("C222", "100nF", C0402)]):
     add(ref, "Device", "C", 690 + 8 * k, 60, val, fp, {"1": "+3V3", "2": "GND"})
+
+# ── 9. HDMI0 ──────────────────────────────────────────────────────────
+# 照官方 CM5 IO 板(rev 2):TMDS 四對、DDC(SCL/SDA)、CEC、HPD 直接接 HDMI 座,不另加 ESD 或上拉
+#   (DDC 上拉與位準轉換在 CM5 內);各對的屏蔽腳(D2S/D1S/D0S/CKS)與外殼接 GND,UTILITY 不接。
+# 18 腳 +5V:HDMI 規範要求 source 供 ≥ 55mA、限流 ≤ 0.5A。官方用 RT9742SNGV(固定致能);
+#   本板用 TPS2051C(KiCad 有符號、JLC C129581,限流約 0.5–0.9A),EN 接 CM5_3V3 → CM5 關機時
+#   不對顯示器送 5V。⚠ TPS2051C 的限流上限略高於 0.5A,實務上常見,但要確認可接受。
+# 座子:Molex 208658-1001(JLC C916313)。
+add("J70", "Connector", "HDMI_A", 720, 235, "HDMI", "Connector_Video:HDMI_A_Molex_208658-1001_Horizontal", {
+    "1": "HDMI0_D2_P", "3": "HDMI0_D2_N", "4": "HDMI0_D1_P", "6": "HDMI0_D1_N",
+    "7": "HDMI0_D0_P", "9": "HDMI0_D0_N", "10": "HDMI0_CK_P", "12": "HDMI0_CK_N",
+    "2": "GND", "5": "GND", "8": "GND", "11": "GND", "17": "GND", "SH": "GND",
+    "13": "HDMI0_CEC", "14": None, "15": "HDMI0_SCL", "16": "HDMI0_SDA", "18": "HDMI_5V", "19": "HDMI0_HPD",
+})
+add("U70", "Power_Management", "TPS2051CDBV", 670, 215, "TPS2051CDBV", "Package_TO_SOT_SMD:SOT-23-5",
+    {"5": "+5V", "2": "GND", "4": "CM5_3V3", "3": None, "1": "HDMI_5V"})
+add("C230", "Device", "C", 655, 232, "100nF", C0402, {"1": "+5V", "2": "GND"})
+add("C231", "Device", "C", 688, 232, "100nF", C0402, {"1": "HDMI_5V", "2": "GND"})
 
 n.write(HERE.parent / "cm5.kicad_sch")
