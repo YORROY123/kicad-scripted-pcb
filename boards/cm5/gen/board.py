@@ -10,6 +10,7 @@
   7. USB 2.0:FSUSB42 切換 Hub(USB2514B → USB-A ×2)/ USB-C 燒錄口
   8. M.2 M-key(PCIe Gen2 ×1,NVMe 2230–2280)
   9. HDMI0(Type A)
+  10. 40-pin GPIO(樹莓派 HAT 腳位)、風扇(JST SH 4P,與樹莓派主動散熱器相同)
 
 ──────────────── 1. 54V 輸入 → 5V / 12A ────────────────
 J20 54V 輸入 → F1(4A)→ +54V。D20(SM6T68A,VRM 58.1V)跨在 +54V 對地:
@@ -177,6 +178,8 @@ CM5_PINS = {
     # 5. USB3-0 → LAN7800 #0、USB3-1 → LAN7800 #1(CM5 的 TX 已含耦合電容,規格書 4.2)
     130: "CM5U0_RX_P", 128: "CM5U0_RX_N", 142: "LAN0_RX_P", 140: "LAN0_RX_N", 134: "LAN0_DP", 136: "LAN0_DM",
     101: "USB_OTG_ID", 103: "CM5_USB_N", 105: "CM5_USB_P",   # 7. USB 2.0
+    # 10. 風扇:Fan_PWM 開汲極(規格書 4.2)、Fan_Tacho 內部 1.8k 上拉
+    19: "FAN_PWM", 16: "FAN_TACHO",
     # 9. HDMI0(HDMI1 不用,打 NC)
     170: "HDMI0_D2_P", 172: "HDMI0_D2_N", 176: "HDMI0_D1_P", 178: "HDMI0_D1_N",
     182: "HDMI0_D0_P", 184: "HDMI0_D0_N", 188: "HDMI0_CK_P", 190: "HDMI0_CK_N",
@@ -192,7 +195,10 @@ def cm5_map(first: int) -> dict:
     out = {}
     for pad in range(1, 101):
         pin = first + pad - 1
-        out[str(pad)] = RAIL.get(NAME[pin], CM5_PINS.get(pin))
+        name = NAME[pin]
+        # 10. GPIO0–27(含 ID_SD/ID_SC = GPIO0/1)全部拉到 40-pin 排針,網名用規格書腳名
+        gpio = name if (name.startswith("GPIO") and name[4:].isdigit()) or name in ("ID_SD", "ID_SC") else None
+        out[str(pad)] = RAIL.get(name, CM5_PINS.get(pin, gpio))
     return out
 
 
@@ -514,5 +520,24 @@ add("U70", "Power_Management", "TPS2051CDBV", 670, 215, "TPS2051CDBV", "Package_
     {"5": "+5V", "2": "GND", "4": "CM5_3V3", "3": None, "1": "HDMI_5V"})
 add("C230", "Device", "C", 655, 232, "100nF", C0402, {"1": "+5V", "2": "GND"})
 add("C231", "Device", "C", 688, 232, "100nF", C0402, {"1": "HDMI_5V", "2": "GND"})
+
+# ── 10. 40-pin GPIO、風扇 ──────────────────────────────────────────────
+# 40-pin:樹莓派標準(與官方 CM5 IO 板 J8 逐腳相同,已對其網表核對):1/17 = CM5_3V3(模組輸出,
+#   每腳 300mA、共 600mA,與 LED 等共用)、2/4 = +5V、27/28 = ID_SD/ID_SC(HAT EEPROM)。
+#   排針:2.54mm 2×20 直插(JLC C25503140),手焊或波峰焊。
+HAT = {1: "CM5_3V3", 2: "+5V", 3: "GPIO2", 4: "+5V", 5: "GPIO3", 6: "GND", 7: "GPIO4", 8: "GPIO14",
+       9: "GND", 10: "GPIO15", 11: "GPIO17", 12: "GPIO18", 13: "GPIO27", 14: "GND", 15: "GPIO22",
+       16: "GPIO23", 17: "CM5_3V3", 18: "GPIO24", 19: "GPIO10", 20: "GND", 21: "GPIO9", 22: "GPIO25",
+       23: "GPIO11", 24: "GPIO8", 25: "GND", 26: "GPIO7", 27: "ID_SD", 28: "ID_SC", 29: "GPIO5", 30: "GND",
+       31: "GPIO6", 32: "GPIO12", 33: "GPIO13", 34: "GND", 35: "GPIO19", 36: "GPIO16", 37: "GPIO26",
+       38: "GPIO20", 39: "GND", 40: "GPIO21"}
+add("J80", "Connector_Generic", "Conn_02x20_Odd_Even", 720, 330, "GPIO 40-pin",
+    "Connector_PinHeader_2.54mm:PinHeader_2x20_P2.54mm_Vertical", {str(k): v for k, v in HAT.items()})
+# 風扇:JST SH 4P(SM04B-SRSS-TB,JLC C160404),照官方 IO 板:1 = +5V、2 = PWM(10k 上拉 CM5_3V3)、
+#   3 = GND、4 = TACHO。與樹莓派 5 / CM5 主動散熱器的接頭相容。
+add("J81", "Connector_Generic_MountingPin", "Conn_01x04_MountingPin", 720, 400, "FAN",
+    "Connector_JST:JST_SH_SM04B-SRSS-TB_1x04-1MP_P1.00mm_Horizontal",
+    {"1": "+5V", "2": "FAN_PWM", "3": "GND", "4": "FAN_TACHO", "MP": "GND"})
+add("R230", "Device", "R", 690, 400, "10k", R0402, {"1": "CM5_3V3", "2": "FAN_PWM"})
 
 n.write(HERE.parent / "cm5.kicad_sch")
