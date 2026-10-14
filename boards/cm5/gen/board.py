@@ -5,7 +5,8 @@
   2. 5V → 3.3V / 8A(TPS568230)
   3. CM5 連接器:電源腳、GPIO_VREF、RTC 電池、電源鍵、nRPIBOOT、電源/活動燈
   4. CM5 原生 Gigabit 網口(BCM54210PE → HR911130A MagJack)
-  5. USB3 → Gigabit ×2(LAN7800);MDI 先打 NC,區塊 6(PoE 變壓器、IP804AR、RJ45)再接
+  5. USB3 → Gigabit ×2(LAN7800)
+  6. 802.3at PoE ×2(IP804AR + G2423S 變壓器 + RJHSE5380 RJ45)
 
 ──────────────── 1. 54V 輸入 → 5V / 12A ────────────────
 J20 54V 輸入 → F1(4A)→ +54V。D20(SM6T68A,VRM 58.1V)跨在 +54V 對地:
@@ -254,8 +255,9 @@ def lan7800(i: int, x: float, y: float) -> None:
             "13": f"{u}_SW", "15": f"{u}_1V2", "21": f"{u}_1V2", "42": f"{u}_1V2",
             "25": f"{u}_1V2", "30": f"{u}_1V2", "44": f"{u}_1V2",
             "47": f"{u}_REXT", "48": f"{u}_FILT", "37": f"{u}_RBIAS", "40": f"{u}_XI", "41": f"{u}_XO",
-            # MDI:區塊 6 接 PoE 變壓器
-            "1": None, "2": None, "4": None, "5": None, "7": None, "8": None, "10": None, "11": None,
+            # MDI → 區塊 6 的 PoE 變壓器
+            "1": f"{u}_TR0P", "2": f"{u}_TR0N", "4": f"{u}_TR1P", "5": f"{u}_TR1N",
+            "7": f"{u}_TR2P", "8": f"{u}_TR2N", "10": f"{u}_TR3P", "11": f"{u}_TR3N",
             "26": f"{u}_DP", "27": f"{u}_DM", "28": f"{u}_TX_P", "29": f"{u}_TX_N",
             "31": f"{u}_RX_P", "32": f"{u}_RX_N",
             "23": "+3V3", "35": "PG_3V3", "34": "GND", "16": None, "17": f"{u}_EEDI",
@@ -291,5 +293,81 @@ def lan7800(i: int, x: float, y: float) -> None:
 
 lan7800(0, 140, 290)
 lan7800(1, 140, 400)
+
+# ── 6. 802.3at PoE ×2 ─────────────────────────────────────────────────
+# IC Plus IP804AR(規格書 IP804AR-DS-R02,JLC C19626921):4 埠 PSE,MOSFET 與 0.1Ω 取樣內建。
+#   V54 是各埠共同的正端,PortNx 是開關後的負端(第 2 章應用圖:V54 → 保險絲 → 變壓器中心抽頭,
+#   PortNx → 另一組中心抽頭,埠上並 TVS 與電容)。本板用 Port0、Port1,Port2/3 不接。
+#   - 自動模式、不帶 MCU:SCAN0/SCAN1 = 0(表 2);LED 序列輸出關閉:LED_CLK / LED_DAT 下拉,
+#     AD2 不論(表 2 LED Disable 欄);AD0–AD2 接地。沒有 EEPROM:SCL / SDAI 上拉,讀到的
+#     第 0 位元組不是 0x5A → 用預設值(5.4);預設每埠 at 模式(0x25 = 0xF)。
+#   - ALT_A/B = 0(Alternative A)、24V_En = 0、4Pair_En = 0,開機鎖存(表 1)。
+#   - 電源:V54 1µF + 47µF/100V;V5、V3P3、V1P8、DV3P3 各 4.7µF;VPP 接 V5;EnB_Reg 接地
+#     (用內建 3.3V);V3P3 與 DV3P3 相接;In_Top 接地;RstN 10k 上拉 + 100nF。
+#   - V54 at 模式要 50–57V(7.2)→ 宣告在 rails.json,review.py 檢查。
+#     ⚠ LM5146 的 UVLO 是 40V:輸入在 40–50V 時 CM5 照常開機,但 PoE 可能不供電(或只能 af)。
+# 埠的接法(Alternative A、MDI-X 極性,IEEE 802.3 表 33-2):RJ45 3/6 = 正(V54)、1/2 = 負(PortN)。
+#   PD 端有整流橋,兩種極性都可以;⚠ 極性與 Alternative 選擇要由懂 PoE 的人審。
+#   G2423S(JLC C5122139,每埠 720mA ≥ IP804AR at 的 Icut 640mA):第 k 組 TDk 接 LAN7800 TR(k−1),
+#   MXk 接 RJ45 的第 k 對(1/2、3/6、4/5、7/8)。MCT1 → PortN、MCT2 → 保險絲 → V54;
+#   不供電的 MCT3、MCT4 各經 75Ω 到共用點、1000pF/2kV 對地(Bob Smith 終端)。
+#   晶片側中心抽頭 TCT 各 100nF 對地(LAN7800 規格書:中心抽頭不加電壓)。
+#   每埠:保險絲 1.5A(Ilim 最大 920mA)、TVS SM6T68A(VRM 58.1V)與 100nF/100V 跨在埠的正負之間。
+#     ⚠ SM6T68A 箝位最高約 92V,超過 IP804AR 絕對最大 75V —— TI 等 PSE 參考設計也用 58V 級 TVS,待審。
+#   RJ45:Amphenol RJHSE5380(屏蔽、無變壓器、無燈,JLC C464586),屏蔽接 GND。
+C1206 = "Capacitor_SMD:C_1206_3216Metric"
+R0603 = "Resistor_SMD:R_0603_1608Metric"
+add("U50", "CM5_Parts", "IP804AR", 360, 300, "IP804AR", "Package_DFN_QFN:QFN-48-1EP_7x7mm_P0.5mm_EP5.3x5.3mm", {
+    "17": "+54V", "19": "IP_5V", "22": "IP_5V", "20": "IP_3V3", "44": "IP_3V3", "21": "IP_1V8",
+    "24": "GND", "45": "IP_RSTN", "13": "GND", "14": "GND", "28": "GND", "29": "GND", "30": "GND",
+    "23": "GND", "46": "GND", "47": "GND", "48": "GND",
+    "39": "IP_SCL", "41": "IP_SDA", "40": None, "42": None, "15": None,
+    "3": "POE0_N", "5": "POE1_N", "8": None, "10": None,
+    "32": None, "33": None, "34": None, "35": None, "36": None,
+    "37": "IP_LEDCLK", "38": "IP_LEDDAT",
+    "1": "GND", "6": "GND", "11": "GND", "12": "GND", "25": "GND", "26": "GND", "27": "GND", "31": "GND",
+    "43": "GND", "49": "GND", "2": None, "4": None, "7": None, "9": None, "16": None, "18": None,
+})
+for k, (ref, net, val, fp) in enumerate([("C82", "+54V", "1uF", C1206), ("C83", "+54V", "47uF", "Capacitor_SMD:CP_Elec_10x10"),
+                                         ("C84", "IP_5V", "4.7uF", C0603), ("C85", "IP_3V3", "4.7uF", C0603),
+                                         ("C86", "IP_3V3", "4.7uF", C0603), ("C87", "IP_1V8", "4.7uF", C0603),
+                                         ("C88", "IP_RSTN", "100nF", C0402)]):
+    add(ref, "Device", "C_Polarized" if ref == "C83" else "C", 300 + 9 * k, 370, val, fp, {"1": net, "2": "GND"})
+for k, (ref, a, b) in enumerate([("R74", "IP_3V3", "IP_RSTN"), ("R75", "IP_3V3", "IP_SCL"), ("R76", "IP_3V3", "IP_SDA"),
+                                 ("R77", "IP_LEDCLK", "GND"), ("R78", "IP_LEDDAT", "GND")]):
+    add(ref, "Device", "R", 300 + 9 * k, 395, "10k", R0402, {"1": a, "2": b})
+
+
+def poe_port(i: int, x: float, y: float) -> None:
+    u, p = f"LAN{i}", f"POE{i}"
+    add(f"T4{i}", "CM5_Parts", "G2423S", x, y, "G2423S", "CM5:Transformer_CNDtek_G2423S", {
+        "23": f"{u}_TR0P", "22": f"{u}_TR0N", "24": f"{p}_TCT1",
+        "20": f"{u}_TR1P", "19": f"{u}_TR1N", "21": f"{p}_TCT2",
+        "17": f"{u}_TR2P", "16": f"{u}_TR2N", "18": f"{p}_TCT3",
+        "14": f"{u}_TR3P", "13": f"{u}_TR3N", "15": f"{p}_TCT4",
+        "2": f"{p}_A_P", "3": f"{p}_A_N", "1": f"{p}_N",           # RJ45 1/2:負
+        "5": f"{p}_B_P", "6": f"{p}_B_N", "4": f"{p}_P",           # RJ45 3/6:正
+        "8": f"{p}_C_P", "9": f"{p}_C_N", "7": f"{p}_CT3",         # RJ45 4/5:不供電
+        "11": f"{p}_D_P", "12": f"{p}_D_N", "10": f"{p}_CT4",      # RJ45 7/8:不供電
+    })
+    add(f"J4{i}", "Connector", "RJ45_Shielded", x + 60, y, f"POE{i}", "Connector_RJ:RJ45_Amphenol_RJHSE5380", {
+        "1": f"{p}_A_P", "2": f"{p}_A_N", "3": f"{p}_B_P", "6": f"{p}_B_N",
+        "4": f"{p}_C_P", "5": f"{p}_C_N", "7": f"{p}_D_P", "8": f"{p}_D_N", "SH": "GND",
+    })
+    for k in range(4):
+        add(f"C{70 + 4 * i + k}", "Device", "C", x - 50 + 8 * k, y + 40, "100nF", C0402,
+            {"1": f"{p}_TCT{k + 1}", "2": "GND"})
+    add(f"R{80 + 2 * i}", "Device", "R", x + 20, y + 40, "75", R0603, {"1": f"{p}_CT3", "2": f"{p}_BOB"})
+    add(f"R{81 + 2 * i}", "Device", "R", x + 28, y + 40, "75", R0603, {"1": f"{p}_CT4", "2": f"{p}_BOB"})
+    add(f"C{90 + i}", "Device", "C", x + 36, y + 40, "1nF 2kV", C1206, {"1": f"{p}_BOB", "2": "GND"})
+    add(f"F4{i}", "Device", "Fuse", x + 30, y - 40, "1.5A", "Fuse:Fuse_1206_3216Metric", {"1": "+54V", "2": f"{p}_P"})
+    # SM6T68A:1 號腳是陰極(review.py CATHODE_PIN)
+    add(f"D6{i}", "Diode", "SM6T68A", x + 44, y - 30, "SM6T68A", "Diode_SMD:D_SMB", {"1": f"{p}_P", "2": f"{p}_N"}, rot=90)
+    add(f"C{92 + i}", "Device", "C", x + 54, y - 30, "100nF", "Capacitor_SMD:C_0805_2012Metric",
+        {"1": f"{p}_P", "2": f"{p}_N"})
+
+
+poe_port(0, 500, 300)
+poe_port(1, 500, 420)
 
 n.write(HERE.parent / "cm5.kicad_sch")

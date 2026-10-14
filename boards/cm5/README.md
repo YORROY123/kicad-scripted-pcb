@@ -63,6 +63,27 @@ Raspberry Pi Compute Module 5(含 eMMC)的通用載板,目標是 JLCPCB 能直�
   **MDI(TR0–TR3)暫時 NC**,區塊 6 接 PoE 變壓器。符號 `gen/parts_sym.py` 對規格書圖 3-1 自動比對 48/48。
   review.py 加 LAN7800 電源範圍與內建穩壓器輸出,3 個突變測試(1.2V/2.5V 接錯、3.3V 腳接 5V)都抓到。
 
+- **原理圖區塊 6:802.3at PoE ×2**。IP804AR(JLC C19626921,4 埠 PSE、MOSFET 內建,用 Port0/1)自動模式、
+  無 EEPROM、序列 LED 關閉;每埠 G2423S 變壓器(C5122139)→ Amphenol RJHSE5380 RJ45(C464586)。
+  Alternative A、MDI-X 極性:RJ45 3/6 = +54V(經 1.5A 保險絲)、1/2 = PortN;4/5、7/8 中心抽頭經 75Ω +
+  1nF/2kV(Bob Smith);每埠 SM6T68A + 100nF/100V。LAN7800 MDI 接上變壓器晶片側,中心抽頭各 100nF。
+  符號:IP804AR 對規格書表 1 自動比對 48/48;G2423S 照轉圖的接線圖。`gen/g2423s_fp.py` 封裝(內外緣 12.70/16.50、
+  跨距 13.97 自動核對;空板 DRC 0)。ERC 0、網表 814/814、審查 0 錯誤。
+- `rails.json`:宣告從接頭進來的電源範圍(+54V 50–57V),review.py 據此推算與檢查(IP804AR V54 at 模式 50–57V)。
+- `lib/netlabel.py`:電氣類型已是 no_connect 的腳不再加 NC 標記(KiCad 會誤報 dangling);relay8 原理圖因此少一個
+  多餘的 NC 標記,ERC 與網表不變。
+
+### PoE 區塊待審(送廠前必須由懂 PoE 的人看)
+1. **極性與 Alternative**:採 Alternative A、MDI-X(3/6 正、1/2 負);IP804AR 的 ALT_A/B 腳只影響內部設定,
+   規格書沒有說明對偵測的影響。
+2. **TVS**:SM6T68A 箝位最高約 92V > IP804AR 絕對最大 75V(PortN、V54)。參考設計多用 58V 級 TVS,但要確認。
+3. **輸入電壓**:LM5146 UVLO 40V,但 802.3at 要 V54 ≥ 50V → 輸入 40–50V 時 CM5 開機、PoE 可能不供電。
+   電源要選 54V(52–57V)。
+4. **功率預算**:2 埠 × 30W(at)+ 5V 系統最多 60W ≈ 125W,與 120W 輸入接近;F1 4A 夠用但要再算一次。
+5. **供電中心抽頭的終端**:MCT1/MCT2 只接電源,沒有 Bob Smith(帶電的抽頭不能直接經 75Ω 接地);
+   EMC 上是否要加 75Ω + 10nF/100V 待審。
+6. G2423S 焊墊長 1.90(由內外緣算出)vs 圖上另標 2.00 ± 0.25,在公差內。
+
 ### 電源區塊待確認
 1. **電感封裝**:目前暫填 `L_Bourns_SRP1050WA`,要依 TDK SPM10065VT 的規格書焊盤圖另做(可用 Pi 轉圖)。
 2. **LM5146 裸露焊盤尺寸**:LCSC 的規格書只有封裝總覽頁,沒有 RGY0020 詳圖;

@@ -132,7 +132,80 @@ LAN7800 = dict(
     ],
 )
 
-PARTS = [LM5146, HR911130A, LAN7800]
+# IC Plus IP804AR 規格書 IP804AR-DS-R02 表 1(QFN-48 7×7)。49 = 封裝 EP(接 AGND)
+IP804AR = dict(
+    name="IP804AR", ref="U", half_w=15.24, rows=26,
+    footprint="Package_DFN_QFN:QFN-48-1EP_7x7mm_P0.5mm_EP5.3x5.3mm",
+    datasheet="https://www.lcsc.com/product-detail/C19626921.html",
+    desc="4-port IEEE 802.3af/at PSE controller, integrated MOSFETs and 0.1R sense, QFN-48 7x7",
+    pins=[
+        ("17", "V54", "power_in", "L", 0),
+        ("19", "V5", "power_out", "L", 2),
+        ("22", "VPP", "power_in", "L", 3),
+        ("20", "V3P3", "power_out", "L", 4),
+        ("44", "DV3P3", "power_in", "L", 5),
+        ("21", "V1P8", "power_out", "L", 6),
+        ("24", "EnB_Reg", "input", "L", 7),
+        ("45", "RstN", "input", "L", 9),
+        ("13", "SCAN0", "input", "L", 10),
+        ("14", "SCAN1", "input", "L", 11),
+        ("28", "ALT_A/B", "input", "L", 12),
+        ("29", "24V_En", "input", "L", 13),
+        ("30", "4Pair_En", "input", "L", 14),
+        ("23", "In_Top", "input", "L", 15),
+        ("46", "AD2", "input", "L", 17),
+        ("47", "AD1", "input", "L", 18),
+        ("48", "AD0", "input", "L", 19),
+        ("39", "SCL/EE_CLK", "bidirectional", "L", 21),
+        ("41", "SDAI/EE_DAT", "bidirectional", "L", 22),
+        ("40", "SDAO", "open_collector", "L", 23),
+        ("42", "INTB", "open_collector", "L", 24),
+        ("15", "Vrext", "no_connect", "L", 25),
+        ("3", "PortN0", "passive", "R", 0),
+        ("5", "PortN1", "passive", "R", 1),
+        ("8", "PortN2", "passive", "R", 2),
+        ("10", "PortN3", "passive", "R", 3),
+        ("32", "P0", "output", "R", 5),
+        ("33", "P1", "output", "R", 6),
+        ("34", "P2", "output", "R", 7),
+        ("35", "P3", "output", "R", 8),
+        ("36", "Overload", "output", "R", 9),
+        ("37", "LED_CLK", "open_collector", "R", 11),
+        ("38", "LED_DAT", "open_collector", "R", 12),
+        ("1", "AGND", "power_in", "B", 0),
+        ("6", "AGND", "passive", "B", 1),
+        ("11", "AGND", "passive", "B", 2),
+        ("12", "AGND", "passive", "B", 3),
+        ("25", "AGND", "passive", "B", 4),
+        ("26", "AGND", "passive", "B", 5),
+        ("27", "AGND", "passive", "B", 6),
+        ("31", "AGND", "passive", "B", 7),
+        ("43", "DGND", "passive", "B", 8),
+        ("49", "EPAD", "passive", "B", 9),
+        ("2", "NC", "no_connect", "B", 10),
+        ("4", "NC", "no_connect", "B", 11),
+        ("7", "NC", "no_connect", "B", 12),
+        ("9", "NC", "no_connect", "B", 13),
+        ("16", "NC", "no_connect", "B", 14),
+        ("18", "NC", "no_connect", "B", 15),
+    ],
+)
+
+# CND-tek G2423S 規格書(LCSC C5122139)接線圖:4 組 1CT:1CT,TD = 晶片側、MX / MCT = 纜線側
+G2423S = dict(
+    name="G2423S", ref="T", half_w=12.7, rows=15,
+    footprint="CM5:Transformer_CNDtek_G2423S",
+    datasheet="https://www.lcsc.com/product-detail/C5122139.html",
+    desc="PoE+ (802.3at, 720 mA/port) 1000Base-T single port transformer, 24 pin SMD",
+    pins=[(td_p, f"TD{k}+", "passive", "L", 4 * (k - 1)) for k, td_p in ((1, "23"), (2, "20"), (3, "17"), (4, "14"))]
+         + [(td_n, f"TD{k}-", "passive", "L", 4 * (k - 1) + 1) for k, td_n in ((1, "22"), (2, "19"), (3, "16"), (4, "13"))]
+         + [(ct, f"TCT{k}", "passive", "L", 4 * (k - 1) + 2) for k, ct in ((1, "24"), (2, "21"), (3, "18"), (4, "15"))]
+         + [(mp, f"MX{k}+", "passive", "R", 4 * (k - 1)) for k, mp in ((1, "2"), (2, "5"), (3, "8"), (4, "11"))]
+         + [(mn, f"MX{k}-", "passive", "R", 4 * (k - 1) + 1) for k, mn in ((1, "3"), (2, "6"), (3, "9"), (4, "12"))]
+         + [(mc, f"MCT{k}", "passive", "R", 4 * (k - 1) + 2) for k, mc in ((1, "1"), (2, "4"), (3, "7"), (4, "10"))],
+)
+
+PARTS = [LM5146, HR911130A, LAN7800, IP804AR, G2423S]
 
 
 def font() -> str:

@@ -26,7 +26,9 @@ def load(board):
     parts = json.loads(lf.read_text(encoding="utf-8"))["parts"] if lf.exists() else {}
     wf = bdir / "review-waivers.json"
     waivers = json.loads(wf.read_text(encoding="utf-8")) if wf.exists() else {}
-    return nl, parts, waivers
+    rf = bdir / "rails.json"
+    rails = json.loads(rf.read_text(encoding="utf-8")) if rf.exists() else {}
+    return nl, parts, waivers, rails
 
 
 def move(nl, ref, num, net):
@@ -92,6 +94,9 @@ CASES = [
     ("cm5", "decoupling", "U20", "+5V 的 47µF 全拿掉,只剩 100nF(TI 建議 VIN 40µF)",
      lambda nl: [remove(nl, r) for r in ("C30", "C31", "C32", "C33", "C34", "C45", "C46", "C50")]),
     ("cm5", "rail-range", "J1", "GPIO_VREF 接地(CM5 規格書:不能浮接或接地)", lambda nl: move(nl, "J1", "78", "GND")),
+    ("cm5", "rail-range", "U50", "IP804AR 的 V54 接到 +5V(PoE 至少要 50V)", lambda nl: move(nl, "U50", "17", "+5V")),
+    ("cm5", "decoupling", "U50", "拿掉 IP804AR 的 V54 電容(1µF + 47µF)",
+     lambda nl: [remove(nl, r) for r in ("C82", "C83", "C10", "C11", "C12", "C13", "C14", "C15", "C16", "C17")]),
     ("cm5", "rail-range", "U40", "LAN7800 的 VDD12A 接到 2.5V 網", lambda nl: move(nl, "U40", "25", "LAN0_2V5")),
     ("cm5", "rail-range", "U41", "LAN7800 的 VDD25A 接到 1.2V 網", lambda nl: move(nl, "U41", "3", "LAN1_1V2")),
     ("cm5", "rail-range", "U40", "LAN7800 的 VDD33A 接到 +5V", lambda nl: move(nl, "U40", "38", "+5V")),
@@ -99,8 +104,8 @@ CASES = [
 ]
 
 
-def errors(nl, parts, waivers):
-    rv = Review(nl, parts, waivers)
+def errors(nl, parts, waivers, rails=None):
+    rv = Review(nl, parts, waivers, rails)
     rv.run()
     return [(r, ref, m) for lvl, r, ref, m in rv.findings if lvl == "ERROR"]
 
@@ -114,10 +119,10 @@ def main() -> int:
         bad += bool(e)
     for board, rule, ref, what, mutate in CASES:
         saved = {k: copy.deepcopy(getattr(review, k)) for k in ("TA", "SOURCE_RATING")}
-        nl, parts, waivers = load(board)
+        nl, parts, waivers, rails = load(board)
         parts = {**parts, **EXTRA_PARTS}
         mutate(nl)
-        hit = [x for x in errors(nl, parts, waivers) if x[0] == rule and x[1] == ref]
+        hit = [x for x in errors(nl, parts, waivers, rails) if x[0] == rule and x[1] == ref]
         print(f"{'PASS' if hit else 'FAIL'}  {board}:{what} → {rule} {ref}" + (f"\n        {hit[0][2]}" if hit else ""))
         bad += not hit
         for k, v in saved.items():
