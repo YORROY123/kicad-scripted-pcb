@@ -73,6 +73,21 @@ Raspberry Pi Compute Module 5(含 eMMC)的通用載板,目標是 JLCPCB 能直�
 - `lib/netlabel.py`:電氣類型已是 no_connect 的腳不再加 NC 標記(KiCad 會誤報 dangling);relay8 原理圖因此少一個
   多餘的 NC 標記,ERC 與網表不變。
 
+- **原理圖區塊 7:USB 2.0**。CM5 USB_P/N → FSUSB42(C11355)→ RUN:USB2514B Hub(C16251)→ USB-A ×2
+  (Molex 48037-2200 C2765195,各一顆 AP2171W 1A 開關 C110466 + 100µF);FLASH:USB-C 燒錄口(CC 5.1k)。
+  **原本的 RPIBOOT 按鈕改成 SW51 滑動開關(PCM12,C221841)**:FLASH = nRPIBOOT 低 + OTG_ID 浮接(device),
+  RUN = OTG_ID 接地(host);FSUSB42 Sel 直接接 nRPIBOOT、電源接 CM5_3V3(同電源域)。Hub 預設設定
+  (CFG_SEL = 00、埠 3/4 停用)、24MHz 晶振 C15643。每個 USB 接頭一顆 USBLC6。ERC 0、網表 977/977、審查 0 錯誤;
+  review.py 加 USB2514B / FSUSB42 電源範圍、usb-esd 認得 USB-A,3 個新突變都抓到。
+
+### USB 區塊待確認
+1. **韌體**:RUN 位置 OTG_ID 接地後,config.txt 仍要 `dtoverlay=dwc2,dr_mode=host` —— 寫進韌體交接。
+2. **USB2514B 的 SUSP_IND/LOCAL_PWR**:浮接(內部下拉 = 埠可拔除),但 LOCAL_PWR 讀到低可能讓 hub 回報匯流排供電;
+   對 Microchip 參考設計確認是否要上拉(上拉會讓 NON_REM0 = 1,埠 1 變不可拔除)。
+3. **晶振負載電容**:27pF 為估計(C1 = 2(CL − C0) − CS),實物量頻率;LAN7800 同。
+4. **USB2514B 封裝**:KiCad 預設 `QFN-36-1EP_6x6mm_P0.5mm_EP3.7x3.7mm`,要對規格書的 EP 尺寸。
+5. 燒錄時 CM5 由本板 54V 供電,USB-C 只接資料(VBUS 只到 ESD 參考腳)。
+
 ### PoE 區塊待審(送廠前必須由懂 PoE 的人看)
 1. **極性與 Alternative**:採 Alternative A、MDI-X(3/6 正、1/2 負);IP804AR 的 ALT_A/B 腳只影響內部設定,
    規格書沒有說明對偵測的影響。

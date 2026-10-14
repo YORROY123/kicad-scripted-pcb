@@ -88,6 +88,13 @@ SUPPLY_PINS = {
     "CM5_Parts:IP804AR": {
         "V54": (50.0, 57.0, 1e-6, "IP804AR 規格書 7.2:802.3at 模式 V54 50–57V;表 1:V54 加 1µF + 47µF/100V"),
     },
+    "Interface_USB:USB2514B_Bi": {
+        "VDD33": (3.0, 3.6, None, "USB251xB/xBi 規格書 Rev 2.2 表 6.2:VDD33 3.0–3.6V"),
+        "VDDA33": (3.0, 3.6, None, "USB251xB/xBi 規格書 Rev 2.2 表 6.2:3.3V 電源 3.0–3.6V"),
+    },
+    "Interface_USB:FSUSB42MUX": {
+        "VCC": (3.0, 4.4, None, "FSUSB42 規格書 Recommended Operating Conditions:VCC 3.0–4.4V"),
+    },
     "Regulator_Switching:TPS568230": {
         "VIN": (4.5, 18.0, 40e-6, "TPS568230 規格書 ZHCSIY3C:VIN 4.5–18V,TI 建議 VIN 去耦 40µF"),
     },
@@ -535,7 +542,7 @@ class Review:
 
     def usb_esd(self):
         nl = self.nl
-        vbus = {p.net for r, c in nl.comps.items() if c["lib_id"].startswith("Connector:USB_C")
+        vbus = {p.net for r, c in nl.comps.items() if c["lib_id"].startswith(("Connector:USB_C", "Connector:USB_A"))
                 for p in nl.by_name(r, "VBUS")}
         for ref, c in nl.comps.items():
             if not c["lib_id"].startswith("Power_Protection:USBLC6"):
