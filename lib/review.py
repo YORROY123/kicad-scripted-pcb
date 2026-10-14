@@ -92,6 +92,9 @@ SUPPLY_PINS = {
         "VDD33": (3.0, 3.6, None, "USB251xB/xBi 規格書 Rev 2.2 表 6.2:VDD33 3.0–3.6V"),
         "VDDA33": (3.0, 3.6, None, "USB251xB/xBi 規格書 Rev 2.2 表 6.2:3.3V 電源 3.0–3.6V"),
     },
+    "Connector:Bus_M.2_Socket_M": {
+        "3.3V": (3.135, 3.465, 10e-6, "PCI Express M.2 規範:3.3V ±5%,插座旁要有大電容"),
+    },
     "Interface_USB:FSUSB42MUX": {
         "VCC": (3.0, 4.4, None, "FSUSB42 規格書 Recommended Operating Conditions:VCC 3.0–4.4V"),
     },

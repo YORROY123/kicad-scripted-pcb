@@ -8,6 +8,7 @@
   5. USB3 → Gigabit ×2(LAN7800)
   6. 802.3at PoE ×2(IP804AR + G2423S 變壓器 + RJHSE5380 RJ45)
   7. USB 2.0:FSUSB42 切換 Hub(USB2514B → USB-A ×2)/ USB-C 燒錄口
+  8. M.2 M-key(PCIe Gen2 ×1,NVMe 2230–2280)
 
 ──────────────── 1. 54V 輸入 → 5V / 12A ────────────────
 J20 54V 輸入 → F1(4A)→ +54V。D20(SM6T68A,VRM 58.1V)跨在 +54V 對地:
@@ -58,7 +59,7 @@ ksym.EXTRA_DIRS.append(HERE.parent / "symbols")
 from netlabel import NetLabeler  # noqa: E402
 from schgen import Schematic  # noqa: E402
 
-s = Schematic(paper="A1", title="Raspberry Pi CM5 carrier")
+s = Schematic(paper="A0", title="Raspberry Pi CM5 carrier")
 n = NetLabeler(s)
 add, flag = n.add, n.flag
 
@@ -175,6 +176,9 @@ CM5_PINS = {
     # 5. USB3-0 → LAN7800 #0、USB3-1 → LAN7800 #1(CM5 的 TX 已含耦合電容,規格書 4.2)
     130: "CM5U0_RX_P", 128: "CM5U0_RX_N", 142: "LAN0_RX_P", 140: "LAN0_RX_N", 134: "LAN0_DP", 136: "LAN0_DM",
     101: "USB_OTG_ID", 103: "CM5_USB_N", 105: "CM5_USB_P",   # 7. USB 2.0
+    # 8. PCIe(PCIE_PWR_EN 不用:M.2 的 3.3V 直接取 +3V3,見區塊 8)
+    102: "PCIE_nCLKREQ", 104: "PCIE_nWAKE", 109: "PCIE_nRST", 110: "PCIE_CLK_P", 112: "PCIE_CLK_N",
+    116: "PCIE_RX_P", 118: "PCIE_RX_N", 122: "PCIE_TX_P", 124: "PCIE_TX_N",
     159: "CM5U1_RX_P", 157: "CM5U1_RX_N", 171: "LAN1_RX_P", 169: "LAN1_RX_N", 163: "LAN1_DP", 165: "LAN1_DM",
 }
 
@@ -462,5 +466,30 @@ def usb_a(i, y):
 
 usb_a(0, 180)
 usb_a(1, 218)
+
+# ── 8. M.2 M-key ──────────────────────────────────────────────────────
+# CM5 規格書 2.3:PCIe Gen2 ×1;CM5 的 TX 已含耦合電容,NVMe 卡的 TX 也自帶(規格書明寫),
+#   接插座時不用交換 TX/RX(訊號以 host 角度命名),對內 P/N 可對調。CLKREQ#、WAKE# 在 CM5 內部上拉。
+# 腳位照官方 CM5 IO 板(rev 2)逐腳:41/43 → CM5 RX_P/RX_N、47/49 → TX_P/TX_N(兩者都對調了 P/N,
+#   官方實際可用;PCIe 鏈結訓練會自動處理極性)、55/53 → REFCLK P/N(時脈不可對調,官方也沒對調)、
+#   50 PERST#、52 CLKREQ#、54 PEWAKE#。只用 lane 0;SUSCLK、PEDET、DEVSLP、LED1# 不接。
+# 3.3V:官方用一顆獨立降壓、由 PCIE_PWR_EN 開關;本板 +3V3 有 8A 且已跟著 CM5 開關機
+#   → 直接接 +3V3(NVMe 最多約 2.5A),少一顆 IC;代價是 OS 不能單獨重啟 SSD 電源。
+#   去耦:2 × 47µF + 100nF(M.2 規範建議靠近插座)。
+# 插座:TE 1-2199230-6(M key,JLC C4710843)。⚠ 2199230-4(不帶 1-)是 E key,不能用。
+add("J60", "Connector", "Bus_M.2_Socket_M", 720, 120, "M.2 M-key", "CM5:M.2_Socket_M_TE_1-2199230-6", {
+    **{p: "+3V3" for p in ("2", "4", "12", "14", "16", "18", "70", "72", "74")},
+    **{p: "GND" for p in ("1", "3", "9", "15", "21", "27", "33", "39", "45", "51", "57", "71", "73", "75")},
+    "41": "PCIE_RX_P", "43": "PCIE_RX_N", "47": "PCIE_TX_P", "49": "PCIE_TX_N",
+    "55": "PCIE_CLK_P", "53": "PCIE_CLK_N",
+    "50": "PCIE_nRST", "52": "PCIE_nCLKREQ", "54": "PCIE_nWAKE",
+    **{p: None for p in ("5", "7", "11", "13", "17", "19", "23", "25", "29", "31", "35", "37",
+                         "10", "38", "68", "69",
+                         # 插座本身的 NC 腳(M.2 規範保留)
+                         "6", "8", "20", "22", "24", "26", "28", "30", "32", "34", "36", "40", "42",
+                         "44", "46", "48", "56", "58", "67")},
+})
+for k, (ref, val, fp) in enumerate([("C220", "47uF", C1210), ("C221", "47uF", C1210), ("C222", "100nF", C0402)]):
+    add(ref, "Device", "C", 690 + 8 * k, 60, val, fp, {"1": "+3V3", "2": "GND"})
 
 n.write(HERE.parent / "cm5.kicad_sch")
