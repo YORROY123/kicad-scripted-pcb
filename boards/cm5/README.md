@@ -2,6 +2,8 @@
 
 Raspberry Pi Compute Module 5(含 eMMC)的通用載板,目標是 JLCPCB 能直接 PCBA,CM5 自己插上。
 
+原理圖已完成;PCB 還沒開始。擺位與 3D 預覽(沒佈線、不是正式 PCB)在 [`concept/`](concept/README.md)。
+
 ## 規格(草案)
 
 - 電源:54 V DC 輸入(120 W)→ LM5146 降壓 → 5 V;5 V → 3.3 V 降壓(CM5_3V3 每腳 300 mA、合計 600 mA,不夠供 LAN7800 ×2)
