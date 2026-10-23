@@ -2,7 +2,29 @@
 
 Raspberry Pi Compute Module 5(含 eMMC)的通用載板,目標是 JLCPCB 能直接 PCBA,CM5 自己插上。
 
-原理圖已完成;PCB 還沒開始。擺位與 3D 預覽(沒佈線、不是正式 PCB)在 [`concept/`](concept/README.md)。
+原理圖已完成。PCB 進行中:擺件完成、還沒佈線。3D 預覽在 [`concept/`](concept/README.md)。
+
+## PCB(進行中)
+
+`gen/pcb.py` 讀網表擺出 `cm5.kicad_pcb`;座標與自動擺件在 `gen/placement.py`,3D 預覽也用同一份。
+
+- 170 × 120 mm、4 層。固定孔:板子 M3 ×4(H1–H4),CM5 模組 M2.5 ×4(H5–H8)。
+- 網路類別:`HV54`(+54V、POE*、SW;0.5 mm 線、0.25 mm 間距)、`Rail`(+5V、+3V3、SW3;0.8 mm)、
+  `Power`(GND 與其他小電源;0.5 mm)。54 V 間距取 IPC-2221 表 6-1 的 B4(外層有防焊,51–100 V
+  0.13 mm)再留餘量;B2(無塗層)的 0.6 mm 零件本身做不到(RJ45 腳間 0.53、IP804AR 0.25)。
+- `cm5.kicad_dru`:同一顆零件的焊盤之間最小 0.1 mm(FSUSB42 MSOP-10 焊盤間只有 0.15 mm),
+  走線與過孔仍照網路類別。拿掉這個檔,DRC 會報 FSUSB42 的 8 個間距錯誤。
+- 自檢(`lib/pcbgen.py`):焊盤逐腳對網表、courtyard 真實多邊形不重疊、不出板(板邊接頭只查焊盤)。
+  `build.ps1` 與 CI 再跑 DRC + 原理圖一致性,除了未連接以外不能有錯誤。
+- SW51(FLASH/RUN 滑動開關):撥桿在封裝局部 +y,所以 0°;固定腳到 y=1.83,銅到板邊要 ≥0.5 mm,
+  本體退到板邊內 0.75 mm,撥桿伸出約 0.8 mm。外殼開孔時要確認撥得到。
+
+### PCB 待辦
+
+1. 佈線:USB3、PCIe、HDMI 差分(90/85/100 Ω)要先依 JLC 4 層疊構算線寬間距,再決定哪些交給 freerouting。
+2. +5V(12 A)、+3V3(8 A)改用內層鋪銅;54 V 輸入與 PoE 輸出依電流算線寬。
+3. 被動件位置是自動擺的,去耦電容離 IC 電源腳的距離要逐顆檢查。
+4. 16 個絲印警告(位號出板、重疊)。
 
 ## 規格(草案)
 

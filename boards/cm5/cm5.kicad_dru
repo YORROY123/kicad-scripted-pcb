@@ -1,0 +1,4 @@
+(version 1)
+(rule "pads within one footprint"
+  (condition "A.Type == 'Pad' && B.Type == 'Pad' && A.Parent == B.Parent")
+  (constraint clearance (min 0.1mm)))

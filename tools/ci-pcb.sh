@@ -62,10 +62,18 @@ board() {
             python3 ../../lib/route.py ses "$b" .
             python3 gen/pcb.py finish
             drc "$b" error ;;
+        cm5)  # placed but not routed yet: every DRC error except unconnected pads is a failure
+            python3 gen/pcb.py
+            kicad-cli pcb drc --severity-error --schematic-parity -o drc.rpt "$b.kicad_pcb"
+            if grep '^\[' drc.rpt | grep -v '^\[unconnected_items\]'; then cat drc.rpt; return 1; fi
+            grep '^\*\* Found' drc.rpt | sed 's/^/  /'
+            cd ../..
+            echo "::endgroup::"
+            return ;;
     esac
     python3 ../../lib/fab.py "$b" .
     cd ../..
     echo "::endgroup::"
 }
 
-for b in usbc-ldo esp32c3 relay8; do board "$b"; done
+for b in usbc-ldo esp32c3 relay8 cm5; do board "$b"; done
