@@ -107,8 +107,11 @@ class BoardSpec:
     netclasses: tuple = ()
     # 固定孔中心 (x, y),mm。不在原理图里:放成「只在板上」的封装 H1、H2…,不进 BOM / CPL,
     # 原理图一致性检查也略过。courtyard 照常参与重叠检查(螺丝头与垫圈要有空间)。
+    # 元素也可以写成 (x, y, "库:封装"),单独指定这颗孔的封装(例:载板 M3 + 模块 M2.5)。
     mounting_holes: tuple = ()
     mounting_hole_fp: str = "MountingHole:MountingHole_3.2mm_M3"
+    # 铜层数:2 或 4(4 层时内层 In1/In2 由 KiCad 默认叠层给出,差分阻抗另算)。
+    copper_layers: int = 2
     extra: dict = field(default_factory=dict)
 
 
@@ -139,7 +142,9 @@ def build(spec: BoardSpec, net_path: Path, out: Path) -> None:
 
     board = pcbnew.BOARD()
     ds = board.GetDesignSettings()
-    ds.SetCopperLayerCount(2)
+    if spec.copper_layers not in (2, 4):
+        raise SystemExit(f"copper_layers 只支持 2 或 4,收到 {spec.copper_layers}")
+    ds.SetCopperLayerCount(spec.copper_layers)
     nc = ds.m_NetSettings.GetDefaultNetclass()
     nc.SetTrackWidth(mm(TRACK_W))
     nc.SetClearance(mm(CLEARANCE))
@@ -195,8 +200,8 @@ def build(spec: BoardSpec, net_path: Path, out: Path) -> None:
             if net:
                 pad.SetNet(nets[net])
 
-    lib, name = spec.mounting_hole_fp.split(":")
-    for i, (x, y) in enumerate(spec.mounting_holes, 1):
+    for i, (x, y, *hole_fp) in enumerate(spec.mounting_holes, 1):
+        lib, name = (hole_fp[0] if hole_fp else spec.mounting_hole_fp).split(":")
         ref = f"H{i}"
         if ref in comps:
             raise SystemExit(f"固定孔位号 {ref} 与原理图器件冲突")
