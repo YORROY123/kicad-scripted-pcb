@@ -71,7 +71,95 @@ DRU = """(version 1)
 """
 
 
+# ── 內層電源平面 ────────────────────────────────────────────────────────
+# L2(In1.Cu)整片 GND:差分線的參考面(sim/diff_impedance.py 假設 L1 正下方是整片地)。
+# L3(In2.Cu)分成兩塊:+5V 在右上(L10 降壓輸出 → CM5、40-pin、風扇),
+# +3V3 是 L 形(L20 降壓輸出沿下緣往左 → Hub、LAN7800 ×2,再沿左緣往上 → M.2)。
+# 座標 mm,板框左上為原點;兩塊之間留 0.5 mm。
+PLANES = (
+    ("GND", "In1.Cu", [(0.3, 0.3), (169.7, 0.3), (169.7, 119.7), (0.3, 119.7)]),
+    ("+5V", "In2.Cu", [(60.25, 0.3), (169.7, 0.3), (169.7, 71.75), (60.25, 71.75)]),
+    ("+3V3", "In2.Cu", [(0.3, 0.3), (59.75, 0.3), (59.75, 72.25), (169.7, 72.25),
+                        (169.7, 119.7), (0.3, 119.7)]),
+)
+
+# 載流走廊:(網, 電流 A, 矩形 x0, y0, x1, y1, 電流方向 "x"/"y", 說明)。
+# 走廊必須整塊落在該網的平面裡,且垂直電流方向的寬度 ≥ IPC-2221 算出的寬度。
+# 電流:CM5 5 V 最多 5 A(CM5 規格書 §1「up to 5 A at 5 V」);40-pin 5 V 1 A、風扇 0.5 A 是估計。
+# 3.3 V:M.2 NVMe 2.5 A(M.2 規範 3.3 V 上限)+ LAN7800 ×2 0.592 A(cm5-ref/區塊4)+
+# USB2514B 等約 0.3 A,取 4 A。USB-A ×2 與 HDMI 的 5 V(約 1.5 A)在 +3V3 區域裡,
+# 佈線時走外層,不靠平面。
+CORRIDORS = (
+    ("+5V", 6.5, (95.0, 0.3, 160.0, 71.75), "x", "L10 → CM5 J1、40-pin J80、風扇 J81"),
+    ("+3V3", 4.0, (60.25, 72.25, 165.0, 119.7), "x", "L20 → Hub U61、LAN7800 U40/U41"),
+    ("+3V3", 2.5, (0.3, 20.0, 59.75, 100.0), "y", "左緣往上 → M.2 J60"),
+)
+INNER_CU_MM = 0.0152   # JLC04161H 內層 0.5 oz 實際厚度(jlcpcb.com/impedance)
+TEMP_RISE = 10.0       # °C
+
+
+def ipc2221_inner_width(amps: float) -> float:
+    """IPC-2221 §6.2 內層:I = 0.024·ΔT^0.44·A^0.725(A 為截面積 mil²)→ 需要的寬度 mm。
+
+    這條公式對大面積平面很保守(IPC-2152 允許更小),當作下限檢查用。"""
+    area_mil2 = (amps / (0.024 * TEMP_RISE ** 0.44)) ** (1 / 0.725)
+    return area_mil2 / (INNER_CU_MM / 0.0254) * 0.0254
+
+
+def add_planes(board) -> list[str]:
+    """加內層平面並檢查載流走廊;回傳問題清單(空 = 通過)。"""
+    zones = {}
+    for net, layer, pts in PLANES:
+        z = pcbnew.ZONE(board)
+        z.SetLayer(board.GetLayerID(layer))
+        z.SetNet(board.FindNet(net))
+        z.SetLocalClearance(pcbgen.mm(0.3))
+        z.SetMinThickness(pcbgen.mm(0.25))
+        z.SetPadConnection(pcbnew.ZONE_CONNECTION_THT_THERMAL)
+        # 還沒佈線,平面上沒有過孔;不刪孤島,否則整塊會被當成沒接東西而清掉
+        z.SetIslandRemovalMode(pcbnew.ISLAND_REMOVAL_MODE_NEVER)
+        z.SetZoneName(f"{net} plane")
+        o = z.Outline()
+        o.NewOutline()
+        for x, y in pts:
+            o.Append(pcbgen.at(x, y))
+        board.Add(z)
+        zones.setdefault(net, []).append(z)
+    pcbnew.ZONE_FILLER(board).Fill(board.Zones())
+
+    problems = []
+    for net, amps, (x0, y0, x1, y1), flow, what in CORRIDORS:
+        rect = pcbnew.SHAPE_POLY_SET()
+        rect.NewOutline()
+        for x, y in ((x0, y0), (x1, y0), (x1, y1), (x0, y1)):
+            rect.Append(pcbgen.at(x, y))
+        for z in zones[net]:
+            rect.BooleanSubtract(z.Outline())
+        outside = rect.Area() / 1e12  # nm² → mm²
+        width = (y1 - y0) if flow == "x" else (x1 - x0)
+        need = ipc2221_inner_width(amps)
+        tag = "OK" if outside == 0 and width >= need else "!!"
+        print(f"  {tag} {net:5} {amps:4.1f} A  寬 {width:5.1f} mm(需要 {need:4.1f})  {what}")
+        if outside:
+            problems.append(f"{net} 走廊「{what}」有 {outside:.1f} mm² 落在平面外")
+        if width < need:
+            problems.append(f"{net} 走廊「{what}」寬 {width:.1f} mm < IPC-2221 {need:.1f} mm")
+    return problems
+
+
 if __name__ == "__main__":
     net = BOARD / "net.txt"
+    out = BOARD / "cm5.kicad_pcb"
     (BOARD / "cm5.kicad_dru").write_text(DRU, encoding="utf-8")
-    build(spec(placement(net)), net, BOARD / "cm5.kicad_pcb")
+    build(spec(placement(net)), net, out)
+    board = pcbnew.LoadBoard(str(out))
+    print(f"內層平面(IPC-2221 內層 {INNER_CU_MM} mm 銅、溫升 {TEMP_RISE:g} °C):")
+    bad = add_planes(board)
+    if bad:
+        print("!! 電源平面自檢失敗,拒絕寫出:")
+        for p in bad:
+            print("   ", p)
+        out.unlink()  # build() 已經寫出沒有平面的板檔;不留半成品
+        raise SystemExit(1)
+    pcbgen.stable_uuids(board, "cm5")
+    pcbnew.SaveBoard(str(out), board)
