@@ -76,4 +76,9 @@ board() {
     echo "::endgroup::"
 }
 
+# What route.py ses removes before importing (runs on the committed boards)
+echo "::group::route.py zone handling"
+python3 lib/route_test.py
+echo "::endgroup::"
+
 for b in usbc-ldo esp32c3 relay8 cm5; do board "$b"; done
