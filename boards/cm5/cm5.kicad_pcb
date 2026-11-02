@@ -4572,7 +4572,7 @@
 		(tags "RJ45 8p8c ethernet cat5")
 		(property "Reference" "J40"
 			(at 3.56 -9.5 180)
-			(layer "F.SilkS")
+			(layer "F.Fab")
 			(uuid "9ac7b38f-c503-5fe7-b9fc-901156480a8b")
 			(effects
 				(font
@@ -9476,7 +9476,7 @@
 		(tags "RJ45 8p8c ethernet cat5")
 		(property "Reference" "J41"
 			(at 3.56 -9.5 180)
-			(layer "F.SilkS")
+			(layer "F.Fab")
 			(uuid "1ed398b8-dc14-5d39-a916-4d15670e5799")
 			(effects
 				(font
@@ -15287,7 +15287,7 @@
 		(tags "SOT TO_SOT_SMD")
 		(property "Reference" "D70"
 			(at 0 -2.4 0)
-			(layer "F.SilkS")
+			(layer "F.Fab")
 			(uuid "37c625f0-f3b2-5646-be2f-1c6722789aef")
 			(effects
 				(font
@@ -20886,7 +20886,7 @@
 		(tags "M.2 NGFF M key NVMe socket")
 		(property "Reference" "J60"
 			(at 0 -8 90)
-			(layer "F.SilkS")
+			(layer "F.Fab")
 			(uuid "cd80239b-9e7b-5719-8fe2-4238ef8011e2")
 			(effects
 				(font
@@ -21799,7 +21799,7 @@
 		(tags "SOT TO_SOT_SMD")
 		(property "Reference" "D72"
 			(at 0 -2.4 0)
-			(layer "F.SilkS")
+			(layer "F.Fab")
 			(uuid "434f1025-90f5-5188-b941-81a05a12799f")
 			(effects
 				(font
@@ -23015,7 +23015,7 @@
 		(tags "SOT TO_SOT_SMD")
 		(property "Reference" "D71"
 			(at 0 -2.4 0)
-			(layer "F.SilkS")
+			(layer "F.Fab")
 			(uuid "7d12623c-a430-51be-9833-a26683c85195")
 			(effects
 				(font
