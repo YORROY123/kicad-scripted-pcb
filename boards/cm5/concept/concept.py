@@ -28,7 +28,7 @@ if not KMOD.is_dir():
     KMOD = Path(sys.executable).resolve().parents[1] / "share" / "kicad" / "3dmodels"
 
 from placement import (  # noqa: E402
-    BOARD_HOLES, CM5_C, CM5_HOLES, M2, MODULE_HOLES, W, H, auto_place, overlap,
+    BOARD_HOLES, CM5_C, CM5_HOLES, M2, MODULE_HOLES, W, H, auto_place, overlap, sch_positions,
 )
 
 # ── VRML ─────────────────────────────────────────────────────────────
@@ -215,7 +215,7 @@ def main():
         board.Add(fp)
         fps[ref] = fp
 
-    auto_place(fps, pad_net)
+    auto_place(fps, pad_net, sch_positions(BOARD_DIR / "cm5.kicad_sch"))
 
     # 固定孔:板四角 + CM5 四孔 + SSD 固定柱
     holes = list(BOARD_HOLES) + list(MODULE_HOLES)
