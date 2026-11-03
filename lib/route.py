@@ -69,6 +69,9 @@ def is_own_pour(board, zone) -> bool:
 def clear_routing(board) -> None:
     """清掉上一轮的走线、过孔、gnd_pour 的铺铜,以及规则区(布线禁止区)。
 
+    锁定(locked)的走线与过孔留下:板子生成器自己画的(cm5 电源级接到内层平面的过孔阵列,
+    gen/power_stage.py),不是 freerouting 的结果。
+
     规则区只在布线时有用:relay8 的 mains_route_* 禁止低压线进市电区,导入后
     gen/pcb.py finish 补回市电走线、改加只禁铺铜的 mains_nofill_*。
     其他铜区(内层电源平面)保留:以前这里删掉所有 zone,cm5 的平面会被清空。
@@ -76,7 +79,7 @@ def clear_routing(board) -> None:
     # 用 Delete 不用 Remove:Remove 把所有权交回 Python(thisown=1),删完走线再删 zone 时
     # 会报 'SwigPyObject has no attribute thisown',或直接让 pcbnew 崩溃(0xC0000005)。
     # 前两块板放件时板上没有 zone,这段从没真正执行过;继电器板带着布线禁止区才踩到。
-    for t in list(board.GetTracks()):
+    for t in [t for t in board.GetTracks() if not t.IsLocked()]:
         board.Delete(t)
     for z in [board.GetArea(i) for i in range(board.GetAreaCount())]:
         if z.GetIsRuleArea() or is_own_pour(board, z):
