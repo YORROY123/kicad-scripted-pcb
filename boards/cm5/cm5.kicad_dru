@@ -38,6 +38,30 @@
 (rule "diff pair USB2 CM5"
   (condition "(A.NetName == 'CM5_USB_P' && B.NetName == 'CM5_USB_N') || (A.NetName == 'CM5_USB_N' && B.NetName == 'CM5_USB_P')")
   (constraint clearance (min 0.14mm)))
+(rule "diff pair 乙太網路 0"
+  (condition "(A.NetName == 'ETH0_P' && B.NetName == 'ETH0_N') || (A.NetName == 'ETH0_N' && B.NetName == 'ETH0_P')")
+  (constraint clearance (min 0.19mm)))
+(rule "diff pair 乙太網路 0 width"
+  (condition "A.NetName == 'ETH0_P' || A.NetName == 'ETH0_N'")
+  (constraint track_width (min 0.145mm)))
+(rule "diff pair 乙太網路 1"
+  (condition "(A.NetName == 'ETH1_P' && B.NetName == 'ETH1_N') || (A.NetName == 'ETH1_N' && B.NetName == 'ETH1_P')")
+  (constraint clearance (min 0.19mm)))
+(rule "diff pair 乙太網路 1 width"
+  (condition "A.NetName == 'ETH1_P' || A.NetName == 'ETH1_N'")
+  (constraint track_width (min 0.145mm)))
+(rule "diff pair 乙太網路 3"
+  (condition "(A.NetName == 'ETH3_P' && B.NetName == 'ETH3_N') || (A.NetName == 'ETH3_N' && B.NetName == 'ETH3_P')")
+  (constraint clearance (min 0.19mm)))
+(rule "diff pair 乙太網路 3 width"
+  (condition "A.NetName == 'ETH3_P' || A.NetName == 'ETH3_N'")
+  (constraint track_width (min 0.145mm)))
+(rule "diff pair 乙太網路 2"
+  (condition "(A.NetName == 'ETH2_P' && B.NetName == 'ETH2_N') || (A.NetName == 'ETH2_N' && B.NetName == 'ETH2_P')")
+  (constraint clearance (min 0.19mm)))
+(rule "diff pair 乙太網路 2 width"
+  (condition "A.NetName == 'ETH2_P' || A.NetName == 'ETH2_N'")
+  (constraint track_width (min 0.145mm)))
 (rule "diff pair HDMI0 D2"
   (condition "(A.NetName == 'HDMI0_D2_P' && B.NetName == 'HDMI0_D2_N') || (A.NetName == 'HDMI0_D2_N' && B.NetName == 'HDMI0_D2_P')")
   (constraint clearance (min 0.19mm)))

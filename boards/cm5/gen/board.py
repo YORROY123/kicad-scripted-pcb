@@ -228,9 +228,11 @@ add("R51", "Device", "R", 372, 228, "1k", R0402, {"1": "LED_ACT_K", "2": "LED_nA
 # 屏蔽卡腳也接 GND(本板不另分機殼地)。
 # LED(規格書 4.2):nLED3 = 活動燈(綠)、nLED2 = 速度燈(黃,1G / 100M 連線時亮),
 # 開汲極 IOL 8mA @ VOL < 0.4V;照官方 IO 板 470Ω,陽極接 CM5_3V3(約 2mA)。
+# Pair1、Pair2 在 MagJack 這端對內 P/N 對調(官方 IO 板沒調):本板 J1 → J30 的走法(gen/diff_pairs.py)
+# 兩端手性相反,BCM54210PE 有自動極性修正(CM5 規格書 2.2「pair polarity correction」)。
 add("J30", "CM5_Parts", "HR911130A", 560, 110, "HR911130A", "CM5:RJ45_Hanrun_HR911130A_Horizontal", {
-    "2": "ETH0_P", "3": "ETH0_N", "4": "ETH1_P", "7": "ETH1_N",
-    "5": "ETH2_P", "6": "ETH2_N", "8": "ETH3_P", "9": "ETH3_N",
+    "2": "ETH0_P", "3": "ETH0_N", "4": "ETH1_N", "7": "ETH1_P",
+    "5": "ETH2_N", "6": "ETH2_P", "8": "ETH3_P", "9": "ETH3_N",
     "1": "ETH_CT", "10": "GND", "SH": "GND",
     "11": "CM5_3V3", "12": "ETH_LEDG_K", "14": "CM5_3V3", "13": "ETH_LEDY_K",
 })
