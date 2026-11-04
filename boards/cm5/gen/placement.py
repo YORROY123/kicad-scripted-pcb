@@ -2,8 +2,10 @@
 
 座標 mm,板框左上角為原點,170 × 120。
 - 大件(IC、接頭、電感、大電容)寫在 PLACE。
-- 其餘件 auto_place():依網表找「共用最多小網路」的 IC/接頭當錨點,從錨點螺旋搜尋第一個
-  外接框(含 0.25 mm 間隙)不和已擺件、禁區、固定孔重疊、離板邊 ≥1 mm 的位置。
+- 其餘件 auto_place():依網表找共用小網路的 IC/接頭當錨點(越小的網越算數:1 / 網的焊盤數),
+  從錨點上「那條網的焊盤」螺旋搜尋第一個外接框(含 0.25 mm 間隙)不和已擺件、禁區、固定孔
+  重疊、離板邊 ≥1 mm 的位置 —— 去耦電容因此貼著它服務的那支腳,不是 IC 中心。
+  分數相同、或只接大電源網(+5V/+3V3/+54V)時,選原理圖上離它最近的錨點(電容畫在它的 IC 旁)。
   順序固定(位號排序),所以每次結果相同。
 """
 import math
@@ -106,8 +108,32 @@ def _ref_key(r):
     return (re.sub(r"\d", "", r), int(re.sub(r"\D", "", r)))
 
 
-def auto_place(fps, pad_net):
-    """fps: ref -> 已載入的 FOOTPRINT。擺好所有件(會改 fps 的位置與角度),回傳 ref -> (x, y, rot)。"""
+def sch_positions(sch_path) -> dict:
+    """原理圖每個器件的位置:ref -> (x, y) mm(多單元器件取第一個單元)。"""
+    text = sch_path.read_text(encoding="utf-8")
+    pos = {}
+    for m in re.finditer(r'\(symbol\s*\(lib_id "[^"]*"\)\s*\(at ([-\d.]+) ([-\d.]+)[^)]*\)'
+                         r'(?:(?!\(symbol\s*\(lib_id).)*?\(property "Reference" "([^"]+)"', text, re.S):
+        pos.setdefault(m.group(3), (float(m.group(1)), float(m.group(2))))
+    return pos
+
+
+def pad_xy(fp, ref, nets, pad_net):
+    """fp 上接到 nets 的焊盤中心(板座標 mm),依焊盤編號排序。
+
+    擺件時封裝還沒掛網路,網名從網表 pad_net[(ref, 焊盤編號)] 查。"""
+    out = []
+    for p in sorted(fp.Pads(), key=lambda p: (len(p.GetNumber()), p.GetNumber())):
+        if pad_net.get((ref, p.GetNumber())) in nets:
+            c = p.GetPosition()
+            out.append((pcbnew.ToMM(c.x) - ORIGIN[0], pcbnew.ToMM(c.y) - ORIGIN[1]))
+    return out
+
+
+def auto_place(fps, pad_net, sch_xy=None):
+    """fps: ref -> 已載入的 FOOTPRINT。擺好所有件(會改 fps 的位置與角度),回傳 ref -> (x, y, rot)。
+
+    sch_xy:sch_positions() 的結果;沒有就照舊用位號區段(GROUP)與錨點名稱排序。"""
     net_size, by_ref = {}, {}
     for (ref, _), n in pad_net.items():
         net_size[n] = net_size.get(n, 0) + 1
@@ -122,22 +148,40 @@ def auto_place(fps, pad_net):
     occupied += [list(k) for k in KEEPOUT]  # CM5 模組底下(堆疊 1.5 mm)、SSD 底下
     occupied += [[x - 3.5, y - 3.5, x + 3.5, y + 3.5] for x, y in BOARD_HOLES]  # M3 孔 courtyard
 
-    anchors = set(PLACE) - {"J1", "J2"}
+    # 手擺的大電容(C10、C83…)不當錨點:去耦電容要靠 IC 的腳,不是靠另一顆電容
+    anchors = {r for r in PLACE if not r.startswith("C")} - {"J1", "J2"}
+    used = {}  # (錨點, 網) -> 已分出幾個:同一顆 IC 的多個去耦電容輪流分到它的各支腳
     for ref in sorted(set(fps) - set(PLACE), key=_ref_key):
-        small = {n for n in by_ref.get(ref, ()) if net_size[n] <= 20}
-        best, score = None, 0
-        for a in sorted(anchors | {"J1", "J2"}):
-            s = len(small & by_ref.get(a, set()))
-            if s > score:
-                best, score = a, s
+        mine = by_ref.get(ref, set()) - {"GND"}
+        small = {n for n in mine if net_size[n] <= 20}
+        def sch_dist(a):
+            if not sch_xy or ref not in sch_xy or a not in sch_xy:
+                return 0.0
+            return math.dist(sch_xy[ref], sch_xy[a])
+
+        cands = sorted(anchors | {"J1", "J2"})
+        scores = {a: sum(1 / net_size[n] for n in small & by_ref.get(a, set())) for a in cands}
+        top = max(scores.values())
+        if top > 0:
+            best = min((a for a in cands if scores[a] > top - 1e-9), key=lambda a: (sch_dist(a), a))
+        elif sch_xy and ref in sch_xy:  # 只接大電源網:原理圖上最近、也接這條網的錨點
+            near = [a for a in cands if mine & by_ref.get(a, set())]
+            best = min(near, key=lambda a: (sch_dist(a), a)) if near else None
+        else:
+            best = None
+        if best is None:  # 依位號區段找所屬區塊
+            num = int(re.sub(r"\D", "", ref))
+            best = next(a for lo, a in GROUP if num >= lo)
+        shared = sorted(mine & by_ref.get(best, set()), key=lambda n: (net_size[n], n))
+        spots = pad_xy(fps[best], best, {shared[0]}, pad_net) if shared else []
         if best in ("J1", "J2"):  # CM5 腳的周邊件放模組外側(下緣)
             ax, ay = CM5_C[0], CM5_C[1] + 22
-        elif best:
-            ax, ay = PLACE[best][0], PLACE[best][1]
+        elif spots:
+            k = (best, shared[0])
+            ax, ay = spots[used.get(k, 0) % len(spots)]
+            used[k] = used.get(k, 0) + 1
         else:
-            num = int(re.sub(r"\D", "", ref))
-            grp = next(a for lo, a in GROUP if num >= lo)
-            ax, ay = PLACE[grp][0], PLACE[grp][1]
+            ax, ay = PLACE[best][0], PLACE[best][1]
         fp = fps[ref]
         for step in range(4000):
             ang = step * 0.5

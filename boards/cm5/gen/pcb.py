@@ -15,7 +15,7 @@ sys.path.insert(0, str(HERE.parents[2] / "lib"))
 import pcbgen  # noqa: E402
 import pcbnew  # noqa: E402
 from pcbgen import BoardSpec, build  # noqa: E402
-from placement import BOARD_HOLES, H, MODULE_HOLES, W, auto_place  # noqa: E402
+from placement import BOARD_HOLES, H, MODULE_HOLES, W, auto_place, sch_positions  # noqa: E402
 
 BOARD = HERE.parent
 pcbgen.EXTRA_FP_DIRS.append(str(BOARD / "footprints"))
@@ -81,7 +81,7 @@ def placement(net_path: Path) -> dict:
         if fp is None:
             raise SystemExit(f"{ref}: 载入封装失败 {info['footprint']}")
         fps[ref] = fp
-    return auto_place(fps, pad_net)
+    return auto_place(fps, pad_net, sch_positions(BOARD / "cm5.kicad_sch"))
 
 
 def spec(place: dict) -> BoardSpec:
@@ -230,6 +230,36 @@ def add_planes(board) -> list[str]:
     return problems
 
 
+def decap_report(board, worst: int = 5) -> None:
+    """IC 腳 → 同一條網上最近的對地電容(焊盤中心距離)。只報告,不擋:清單也包含 EN 這類不需要
+    去耦的腳,哪些該去耦以 review.py 的 decoupling 規則為準。"""
+    caps = {}  # 網 -> [(位號, x, y)]
+    for fp in board.GetFootprints():
+        nets = {p.GetNetname() for p in fp.Pads()}
+        if fp.GetReference().startswith("C") and "GND" in nets and len(nets) == 2:
+            for p in fp.Pads():
+                if p.GetNetname() != "GND":
+                    c = p.GetPosition()
+                    caps.setdefault(p.GetNetname(), []).append((fp.GetReference(), c.x, c.y))
+    far = {}  # (IC, 網) -> (距離 mm, 腳, 電容)
+    for fp in board.GetFootprints():
+        if not fp.GetReference().startswith("U"):
+            continue
+        for p in fp.Pads():
+            n, c = p.GetNetname(), p.GetPosition()
+            if n in caps:
+                d, cref = min((math.hypot(c.x - x, c.y - y) / 1e6, r) for r, x, y in caps[n])
+                k = (fp.GetReference(), n)
+                if k not in far or d > far[k][0]:
+                    far[k] = (d, p.GetNumber(), cref)
+    ds = sorted(far.items(), key=lambda kv: -kv[1][0])
+    n3 = sum(d <= 3 for d, *_ in far.values())
+    n6 = sum(3 < d <= 6 for d, *_ in far.values())
+    print(f"去耦電容(IC 腳 → 最近的對地電容):≤ 3 mm {n3}、3–6 mm {n6}、> 6 mm {len(far) - n3 - n6};最遠:")
+    for (ic, n), (d, pin, cref) in ds[:worst]:
+        print(f"  {d:5.1f} mm  {ic}.{pin} {n} → {cref}")
+
+
 if __name__ == "__main__":
     net = BOARD / "net.txt"
     out = BOARD / "cm5.kicad_pcb"
@@ -245,5 +275,6 @@ if __name__ == "__main__":
             print("   ", p)
         out.unlink()  # build() 已經寫出沒有平面的板檔;不留半成品
         raise SystemExit(1)
+    decap_report(board)
     pcbgen.stable_uuids(board, "cm5")
     pcbnew.SaveBoard(str(out), board)
