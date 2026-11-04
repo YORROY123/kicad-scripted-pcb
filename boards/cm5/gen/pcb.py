@@ -201,9 +201,37 @@ def add_power_stage(board) -> list[str]:
             v.SetLocked(True)  # lib/route.py 重新匯入佈線時保留
             board.Add(v)
             vias.setdefault(name, []).append(v)
+    for net, layer, w, pts in power_stage.TRACKS:
+        for a, b in zip(pts, pts[1:]):
+            t = pcbnew.PCB_TRACK(board)
+            t.SetLayer(board.GetLayerID(layer))
+            t.SetStart(pcbgen.at(*a))
+            t.SetEnd(pcbgen.at(*b))
+            t.SetWidth(pcbgen.mm(w))
+            t.SetNet(board.FindNet(net))
+            t.SetLocked(True)
+            board.Add(t)
+    for net, x, y in power_stage.TRACK_VIAS:
+        v = pcbnew.PCB_VIA(board)
+        v.SetPosition(pcbgen.at(x, y))
+        v.SetWidth(pcbgen.mm(pcbgen.VIA_D))
+        v.SetDrill(pcbgen.mm(pcbgen.VIA_DRILL))
+        v.SetNet(board.FindNet(net))
+        v.SetLocked(True)
+        board.Add(v)
     pcbnew.ZONE_FILLER(board).Fill(board.Zones())
 
     problems = []
+    board.BuildConnectivity()
+    conn = board.GetConnectivity()
+    pad_name = lambda p: f"{p.GetParentFootprint().GetReference()}.{p.GetNumber()}"  # noqa: E731
+    for net in power_stage.ROUTED_NETS:
+        pads = [p for p in board.GetPads() if p.GetNetname() == net]
+        # GetConnectedItems 回傳整個連通群(含自己);SWIG 每次給新的包裝物件,用名字比
+        reached = {pad_name(x) for x in conn.GetConnectedItems(pads[0]) if x.GetClass() == "PAD"} if pads else set()
+        loose = [pad_name(p) for p in pads if pad_name(p) not in reached]
+        if not pads or loose:
+            problems.append(f"手佈的網 {net} 沒接通:{', '.join(loose) or '沒有焊盤'}")
     for name, z in zones.items():
         if z.GetFilledPolysList(pcbnew.F_Cu).Area() == 0:
             problems.append(f"鋪銅「{name}」填充後是空的")

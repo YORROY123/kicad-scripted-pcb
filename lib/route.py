@@ -69,7 +69,7 @@ def is_own_pour(board, zone) -> bool:
 def clear_routing(board) -> None:
     """清掉上一轮的走线、过孔、gnd_pour 的铺铜,以及规则区(布线禁止区)。
 
-    锁定(locked)的走线与过孔留下:板子生成器自己画的(cm5 电源级接到内层平面的过孔阵列,
+    锁定(locked)的走线与过孔留下:板子生成器自己画的(cm5 电源级接到内层平面的过孔阵列与闸极驱动线,
     gen/power_stage.py),不是 freerouting 的结果。
 
     规则区只在布线时有用:relay8 的 mains_route_* 禁止低压线进市电区,导入后

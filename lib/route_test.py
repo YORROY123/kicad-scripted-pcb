@@ -90,7 +90,7 @@ def real_boards() -> None:
         after = zone_keys(board)
         assert len(after) == kept, (name, after)
         assert all(z.GetZoneName() for z in board.Zones()), (name, after)
-        print(f"ok    {name}: {before} zones -> kept {len(after)}; {locked} locked vias kept")
+        print(f"ok    {name}: {before} zones -> kept {len(after)}; {locked} locked tracks and vias kept")
 
 
 if __name__ == "__main__":
