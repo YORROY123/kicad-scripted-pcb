@@ -1,5 +1,6 @@
 ﻿# CM5 carrier (work in progress): schematic -> ERC -> netlist -> netlist check -> design review.
-# PCB: placement, inner planes and the power-stage pours/vias (routing phase 1) so far.
+# PCB: placement, inner planes, power-stage pours/vias and gate drive (routing phases 1-2),
+#      PCIe and the LAN0 USB pairs (phase 3, gen/diff_pairs.py) so far.
 #   powershell -ExecutionPolicy Bypass -File build.ps1
 . "$PSScriptRoot\..\..\lib\env.ps1"
 Set-Location $PSScriptRoot

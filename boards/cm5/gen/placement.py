@@ -12,12 +12,13 @@ import math
 import re
 
 import pcbnew
+import diff_pairs
 import power_stage
 from pcbgen import ORIGIN, at
 
 W, H = 170.0, 120.0
 CM5_C = (110.0, 48.0)          # 模組中心;轉 90°,55 × 40 橫放
-M2 = (8.0, 15.0)               # M.2 插座定位孔中點;卡往 +x
+M2 = (11.0, 15.0)              # M.2 插座定位孔中點;卡往 +x
 
 # ── 手動擺放:ref -> (x, y, rot) ──────────────────────────────────────
 EDGE = H
@@ -76,6 +77,8 @@ PLACE = {
     "T40": (12, 86, 0), "T41": (31, 86, 0),     # 與 J40/J41 之間留固定孔 H3
     "U50": (21, 70, 0), "C83": (9, 64, 0),
     "U40": (46, 62, 0), "U41": (46, 78, 0),
+    # USB3 耦合電容並排在 TX 對上(gen/diff_pairs.py);中心距 1.1:courtyard 外框不碰
+    "C121": (56.5, 62.45, 0), "C120": (56.5, 63.55, 0),
     "U30": (46, 95, 0), "U31": (54, 95, 0),
     # USB / HDMI
     "U61": (90, 80, 0), "U60": (104, 76, 0),
@@ -99,8 +102,9 @@ for ref, (mx, my) in CM5_J.items():
     dx, dy = rot_xy(mx, my, 90)
     PLACE[ref] = (CM5_C[0] + dx, CM5_C[1] + dy, 90)
 
-# 板上 M3 固定孔。左上被 M.2 插座、左下被 PoE 口 J40 佔住 → 這兩顆內移
-BOARD_HOLES = [(4, 31), (W - 4, 4), (4, 99.5), (W - 4, H - 4)]
+# 板上 M3 固定孔。左上被 M.2 插座、左下被 PoE 口 J40 佔住 → 這兩顆內移;
+# H1 再往下 2.5 mm:PCIe 從插座南端繞進腳後,M3 螺絲頭(Ø5.5)不能壓到線
+BOARD_HOLES = [(4, 33.5), (W - 4, 4), (4, 99.5), (W - 4, H - 4)]
 
 # 自動擺放的禁區(x0, y0, x1, y1):CM5 模組底下、SSD 底下
 KEEPOUT = [
@@ -170,6 +174,7 @@ def auto_place(fps, pad_net, sch_xy=None):
     occupied += [list(k) for k in KEEPOUT]  # CM5 模組底下(堆疊 1.5 mm)、SSD 底下
     occupied += [[x - 3.5, y - 3.5, x + 3.5, y + 3.5] for x, y in BOARD_HOLES]  # M3 孔 courtyard
     occupied += [list(k) for k in power_stage.keepouts()]  # 電源級的鋪銅與過孔
+    occupied += [list(k) for k in diff_pairs.keepouts()]   # 差分線
 
     # 手擺的大電容(C10、C83…)不當錨點:去耦電容要靠 IC 的腳,不是靠另一顆電容
     anchors = {r for r in PLACE if not r.startswith("C")} - {"J1", "J2"}
