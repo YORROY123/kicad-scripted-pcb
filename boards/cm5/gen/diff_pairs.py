@@ -24,6 +24,14 @@ VIA_PITCH = 1.0      # 換層處一對過孔的中心距
 SKEW_MAX = 0.1       # 對內長度差上限 mm(CM5 規格書 2.3.1 的 PCIe 值,其他介面一併套用)
 GROUP_SKEW = {"HDMI0": 25.0}  # 同一組對與對之間的長度差上限 mm(CM5 規格書 2.5.1)
 KEEP = 0.3          # 自動擺件離差分線(含兩側)至少這麼遠
+VIA_LEN = 1.6        # 一個 F.Cu ↔ B.Cu 過孔的長度 = 板厚(JLC04161H-3313)
+TWIST_VIA = 0.8      # 扭轉時下穿那條的過孔離中心線
+
+
+def twist_span(h: float) -> float:
+    """扭轉段沿行進方向的長度。"""
+    return 2 * (TWIST_VIA - h) + 2 * TWIST_VIA
+
 
 # PCIe 在 J2 頂排往北出;REFCLK / TX 一路在 F.Cu,RX 在 x≈45 從 TX 底下穿過(J2 那端由北到南是
 # TX、RX、CLK,插座那端要 RX、TX、CLK),再從插座南端繞到腳後(奇數腳在靠板邊那排)。
@@ -71,6 +79,38 @@ PAIRS = (
         ("via", (61.0, 64.6)),
         ("F.Cu", [(60.3, 64.6), (52.0, 64.6), (51.4, 64.0), (50.6, 64.0)]),
     ]),
+    # J2 底排的 LAN1 那組往南出、在模組底下 y ≈ 35–38 往西,x ≈ 72–75 往南,y ≈ 77–81 往西進
+    # C150/C151 與 U41(和 LAN0 同樣排法:U41 東側由北到南 RX、TX、D)。J2 那端由西到東是
+    # CM5U1、D、RX,RX 要換到最北:在 x ≈ 105–112 從另外兩對底下穿過。
+    # SS 兩對兩端手性一致(不用 ss_swap);USB2 那對兩端相反、又不能在原理圖對調(LAN7800 的
+    # PORT_SWAP 要燒 OTP 才有預設值):在 U41 東邊扭轉一次。
+    ("USB3-1 RX(CM5 端)", "CM5U1_RX_P", "CM5U1_RX_N", "90", ("J2",), ("C150", "C151"), [
+        ("F.Cu", [(114.1, 33.1), (114.1, 37.0), (73.2, 37.0), (73.2, 79.0), (57.8, 79.0)]),
+    ]),
+    ("USB3-1 TX(LAN7800 端)", "LAN1_TX_P", "LAN1_TX_N", "90", ("C150", "C151"), ("U41",), [
+        ("F.Cu", [(55.2, 79.0), (50.6, 79.0)]),
+    ]),
+    ("USB3-1 RX(LAN7800 端)", "LAN1_RX_P", "LAN1_RX_N", "90", ("J2",), ("U41",), [
+        ("F.Cu", [(116.5, 33.1), (116.5, 39.8), (112.7, 39.8)]),
+        ("via", (112.0, 39.8)),
+        ("B.Cu", [(111.3, 39.8), (110.6, 39.8), (106.4, 35.6), (105.7, 35.6)]),
+        ("via", (105.0, 35.6)),
+        ("F.Cu", [(104.3, 35.6), (71.8, 35.6), (71.8, 77.5), (50.6, 77.5)]),
+    ]),
+    ("USB2 LAN1", "LAN1_DP", "LAN1_DM", "90", ("J2",), ("U41",), [
+        ("F.Cu", [(115.3, 33.1), (115.3, 38.4), (74.6, 38.4), (74.6, 80.6), (66.0, 80.6)]),
+        ("twist",),
+        ("F.Cu", [(66.0 - twist_span(0.1575), 80.6), (52.0, 80.6), (51.4, 80.0), (50.6, 80.0)]),
+    ]),
+    # CM5 的 USB2(到 USB 切換 U60):往南時要過 LAN1 那組與 HDMI0,整段在 B.Cu 下穿(L3 為 +5V);
+    # 上來後往東繞過 J1 東端、從東邊進 U60(轉 180°,讓 J1 的乙太網路可以從 J1 與 U60 之間往西)
+    ("USB2 CM5", "CM5_USB_P", "CM5_USB_N", "90", ("J2",), ("U60",), [
+        ("F.Cu", [(103.3, 33.1), (103.3, 33.2)]),
+        ("via", (103.3, 33.9)),
+        ("B.Cu", [(103.3, 34.6), (103.3, 53.9)]),
+        ("via", (103.3, 54.6)),
+        ("F.Cu", [(103.3, 55.3), (103.3, 56.4), (126.0, 56.4), (126.0, 75.75), (107.3, 75.75)]),
+    ]),
     # HDMI0 在 J2 頂排東端往北出,向東繞過 J2(H5 西側)往南,從模組底下往西,到 x ≈ 76–80 往南,
     # 斜切到 J70。x ≈ 71–75 留給 LAN1 那組往南。J2 那端由西到東 D2、D1、D0、CK,
     # J70 那端由東到西 D2…CK:沿行進方向都是 D2 在左,不交叉。
@@ -93,6 +133,8 @@ EXTRA_TRACKS = (
     # 其餘(到去耦電容)交給 freerouting
     ("LAN0_1V2", "F.Cu", 0.2, [(49.6, 62.25), (51.1, 62.25)]),
     ("LAN0_1V2", "F.Cu", 0.2, [(49.6, 64.75), (50.4, 64.75), (50.4, 65.6)]),
+    ("LAN1_1V2", "F.Cu", 0.2, [(49.6, 78.25), (51.1, 78.25)]),           # U41 同上(往南 16 mm)
+    ("LAN1_1V2", "F.Cu", 0.2, [(49.6, 80.75), (50.4, 80.75), (50.4, 81.6)]),
     # M.2 地腳(51、45、39)→ 旁邊的地過孔
     ("GND", "F.Cu", 0.25, [(4.3, 11.75), (5.725, 11.75)]),
     ("GND", "F.Cu", 0.25, [(4.3, 13.25), (5.725, 13.25)]),
@@ -102,6 +144,7 @@ EXTRA_TRACKS = (
 )
 EXTRA_VIAS = (
     ("LAN0_1V2", 51.1, 62.25), ("LAN0_1V2", 50.4, 65.6),
+    ("LAN1_1V2", 51.1, 78.25), ("LAN1_1V2", 50.4, 81.6),
     # M.2 奇數排的地腳夾在 PCIe 各對之間,外側被走線圍住:就地打到 In1
     ("GND", 4.3, 11.75), ("GND", 4.3, 13.25), ("GND", 4.45, 14.75),
     *(("GND", x, 110.7) for x in (73.0, 71.5, 70.0, 68.5)),
@@ -171,14 +214,32 @@ def route(pair, start: dict, end: dict):
     h = (w + gap) / 2
     tracks, vias, problems = [], [], []
     length = {"P": 0.0, "N": 0.0}
+    via_len = {"P": 0.0, "N": 0.0}   # 只算扭轉多出來的過孔(換層時 P、N 各兩個,互相抵掉)
     term = start
     for k, item in enumerate(path):
-        if item[0] == "via":
+        if item[0] in ("via", "twist"):
             continue
         layer, pts = item
         pts = chamfer(pts)
         left, right = offset(pts, h), offset(pts, -h)
         sp, sn = (left, right) if _closer(term["P"], term["N"], left[0], right[0]) else (right, left)
+        if k + 1 < len(path) and path[k + 1][0] == "twist":
+            d = _unit(pts[-2], pts[-1])
+            p_left = sp is left
+            tw_tracks, tw_vias, after = twist(pts[-1], d, h, w)
+            # twist() 的 "L" 是進來時在左側那條
+            role = {"P": "L" if p_left else "R", "N": "R" if p_left else "L"}
+            for key, net, side in (("P", pnet, sp), ("N", nnet, sn)):
+                line = [term[key]] + side
+                tracks.append((net, layer, w, line))
+                length[key] += _length(line)
+                for lay, pl in tw_tracks[role[key]]:
+                    tracks.append((net, lay, w, pl))
+                    length[key] += _length(pl)
+                vias += [(net, *v) for v in tw_vias[role[key]]]
+                via_len[key] += VIA_LEN * len(tw_vias[role[key]])
+            term = {key: after[role[key]] for key in ("P", "N")}
+            continue
         if k + 1 < len(path):
             cx, cy = path[k + 1][1]
             d = _unit(pts[-2], pts[-1])
@@ -196,11 +257,12 @@ def route(pair, start: dict, end: dict):
             tracks.append((net, layer, w, line))
             length[key] += _length(line)
         term = nxt
+    length = {k: length[k] + via_len[k] for k in length}
     skew = abs(length["P"] - length["N"])
     if skew > SKEW_MAX:
         short = pnet if length["P"] < length["N"] else nnet
         if _compensate(tracks, short, pnet if short == nnet else nnet, skew):
-            length = {k: sum(_length(t[3]) for t in tracks if t[0] == net)
+            length = {k: sum(_length(t[3]) for t in tracks if t[0] == net) + via_len[k]
                       for k, net in (("P", pnet), ("N", nnet))}
             skew = abs(length["P"] - length["N"])
         if skew > SKEW_MAX:
@@ -208,7 +270,26 @@ def route(pair, start: dict, end: dict):
     return tracks, vias, length, problems
 
 
-BUMP_MAX = 0.25      # 補長凸起的高度上限(對與對之間至少 0.52 mm,凸起後仍 ≥ 0.27)
+def twist(a, d, h: float, w: float):
+    """從中心線點 a 沿 d 扭轉一次(P、N 換邊),給只能這樣修手性的介面(USB2)。
+
+    右側那條先 45° 外移到過孔、在 B.Cu 斜穿到另一側再上來;左側那條留在 F.Cu,在中間 45° 換到右側。
+    過孔離中心線 TWIST_VIA,左側那條離它們 ≥ 0.5 mm。回傳 ({"L"/"R": [(層, [點…])]},
+    {"L"/"R": [過孔…]}, {"L"/"R": 扭轉後的端點});"L" 是進來時在左側那條。"""
+    n = (d[1], -d[0])
+    W = lambda s, t: (a[0] + d[0] * s + n[0] * t, a[1] + d[1] * s + n[1] * t)  # noqa: E731
+    v, S = TWIST_VIA, twist_span(h)
+    e = v - h
+    tracks = {
+        "R": [("F.Cu", [W(0, -h), W(e, -v)]), ("B.Cu", [W(e, -v), W(e + 2 * v, v)]),
+              ("F.Cu", [W(e + 2 * v, v), W(S, h)])],
+        "L": [("F.Cu", [W(0, h), W(S / 2 - h, h), W(S / 2 + h, -h), W(S, -h)])],
+    }
+    vias = {"R": [W(e, -v), W(e + 2 * v, v)], "L": []}
+    return tracks, vias, {"L": W(S, -h), "R": W(S, h)}
+
+
+BUMP_MAX = 0.25     # 補長凸起的高度上限(對與對之間至少 0.52 mm,凸起後仍 ≥ 0.27)
 BUMP_TOP = 0.5       # 凸起頂部長度
 BUMP_GAP = 0.6       # 凸起之間
 
@@ -293,6 +374,10 @@ def keepouts() -> list:
             elif item[0] == "F.Cu":
                 for (xa, ya), (xb, yb) in zip(item[1], item[1][1:]):
                     out.append((min(xa, xb) - r, min(ya, yb) - r, max(xa, xb) + r, max(ya, yb) + r))
+            elif item[0] == "twist":
+                a, b = path[k - 1][1][-1], path[k + 1][1][0]
+                rt = TWIST_VIA + 0.3 + KEEP
+                out.append((min(a[0], b[0]) - rt, min(a[1], b[1]) - rt, max(a[0], b[0]) + rt, max(a[1], b[1]) + rt))
     for _, layer, w, pts in EXTRA_TRACKS:
         for (xa, ya), (xb, yb) in zip(pts, pts[1:]):
             r = w / 2 + KEEP
