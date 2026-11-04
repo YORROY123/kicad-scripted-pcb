@@ -507,7 +507,7 @@ for k, (ref, val, fp) in enumerate([("C220", "47uF", C1210), ("C221", "47uF", C1
 # 照官方 CM5 IO 板(rev 2):TMDS 四對、DDC(SCL/SDA)、CEC、HPD 直接接 HDMI 座,不另加 ESD 或上拉
 #   (DDC 上拉與位準轉換在 CM5 內);各對的屏蔽腳(D2S/D1S/D0S/CKS)與外殼接 GND,UTILITY 不接。
 # 18 腳 +5V:HDMI 規範要求 source 供 ≥ 55mA、限流 ≤ 0.5A。官方用 RT9742SNGV(固定致能);
-#   本板用 TPS2051C(KiCad 有符號、JLC C129581,限流約 0.5–0.9A),EN 接 CM5_3V3 → CM5 關機時
+#   本板用 TPS2051C(KiCad 有符號、JLC C129581,限流 0.65–1.05A,SLVSAU6I §6.7),EN 接 CM5_3V3 → CM5 關機時
 #   不對顯示器送 5V。⚠ TPS2051C 的限流上限略高於 0.5A,實務上常見,但要確認可接受。
 # 座子:Molex 208658-1001(JLC C916313)。
 add("J70", "Connector", "HDMI_A", 720, 235, "HDMI", "Connector_Video:HDMI_A_Molex_208658-1001_Horizontal", {

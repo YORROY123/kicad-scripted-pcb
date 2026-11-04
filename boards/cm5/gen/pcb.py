@@ -4,6 +4,8 @@
 必須用 KiCad 自帶的 python.exe 跑:
     <KiCad python> gen/pcb.py
 """
+import fnmatch
+import math
 import sys
 from pathlib import Path
 
@@ -21,17 +23,53 @@ pcbgen.EXTRA_FP_DIRS.append(str(BOARD / "footprints"))
 # 接頭開口要切齊板邊,courtyard 本來就伸出板外;只查焊盤在板內
 OVERHANG = ("J20", "J30", "J40", "J41", "J50", "J51", "J52", "J70", "SW51")
 
-# 線寬 mm、間距 mm、網名。先求能佈通,阻抗控制(USB3/PCIe/HDMI 差分)與實際電流的線寬
-# 在佈線那一步依疊層算過再改,見 README「PCB 待辦」。
+# 線寬 mm、間距 mm、網名。線寬由下面 CURRENTS 的電流算(power_width_problems 檢查);
+# 阻抗控制的差分線寬見 README「差分阻抗」。每個網只對到一個類別。
 NETCLASSES = (
-    # 54 V 輸入與 PoE 輸出。IPC-2221 表 6-1 的 51–100 V:外層有防焊(B4)0.13 mm、無塗層(B2)0.6 mm。
+    # 54 V 輸入。IPC-2221 表 6-1 的 51–100 V:外層有防焊(B4)0.13 mm、無塗層(B2)0.6 mm。
     # 板子有防焊,取 0.25 mm 留餘量。0.6 mm 做不到:RJ45 腳之間只有 0.53、IP804AR(QFN 0.5)0.25。
-    ("HV54", 0.5, 0.25, "+54V", "POE*", "SW"),
-    # 5 V / 12 A 主電源與 3.3 V / 8 A:之後改用鋪銅,這裡先給最寬的走線
-    ("Rail", 0.8, 0.2, "+5V", "+3V3", "SW3"),
+    ("HV54", 1.4, 0.25, "+54V", "VIN_RAW"),
+    # PoE 輸出(含變壓器線側的線對),電壓同上
+    ("PoE", 0.5, 0.25, "POE*"),
+    # 開關節點:電流太大,佈線時改鋪銅(見 POURS);這裡的線寬只是佈線器的起點
+    ("Switch", 0.8, 0.25, "SW", "SW3"),
+    # +5V 外層:平面 → U20 與 USB/HDMI 開關;+3V3 外層:平面 → M.2
+    ("Rail5", 2.7, 0.2, "+5V"),
+    ("Rail3", 1.1, 0.2, "+3V3"),
+    ("USB5V", 0.75, 0.2, "USBA0_VBUS", "USBA1_VBUS", "HDMI_5V", "USBC_VBUS"),
 )
-POWER = ("GND", "CM5_3V3", "IP_3V3", "LAN0_1V2", "LAN1_1V2", "LAN0_2V5", "LAN1_2V5",
-         "USBA0_VBUS", "USBA1_VBUS", "USBC_VBUS")
+POWER = ("GND", "CM5_3V3", "IP_3V3", "LAN0_1V2", "LAN1_1V2", "LAN0_2V5", "LAN1_2V5")
+
+# ── 外層電源走線的電流(IPC-2221 §6.2 外層,1 oz,溫升 10 °C)─────────────────
+# (網, 最大電流 A, 依據)。取「保護動作前能一直流的電流」:限流開關取限流上限,不是額定。
+# 佈線後同一條網的最窄處都要 ≥ 算出的寬度;現在先檢查網路類別的線寬。
+CURRENTS = (
+    ("VIN_RAW", 3.0, "120 W ÷ UVLO 40 V(J20 → F1)"),
+    ("+54V", 3.0, "同上(F1 → C10、Q10、F40/F41)"),
+    ("POE0_P", 0.92, "IP804AR 限流上限(gen/board.py 區塊 6);F40 1.5 A 只在故障時斷"),
+    ("POE0_N", 0.92, "同上,回流"),
+    ("POE1_P", 0.92, "同上"),
+    ("POE1_N", 0.92, "同上,回流"),
+    ("+5V", 4.85, "外層:平面 → U62/U63(AP2171W 限流上限 1.9 A ×2,Diodes DS31564 Rev 9-2)"
+                  "+ U70(TPS2051C 0.5 A 檔 IOS 上限 1.05 A,TI SLVSAU6I §6.7,−40–125 °C);平面 → U20 約 2.9 A 較小"),
+    ("+3V3", 2.5, "外層:平面 → M.2 J60(M.2 規範 3.3 V 上限)"),
+    ("USBA0_VBUS", 1.9, "AP2171W 限流上限"),
+    ("USBA1_VBUS", 1.9, "AP2171W 限流上限"),
+    ("HDMI_5V", 1.05, "TPS2051C 限流上限"),
+    ("USBC_VBUS", 0.5, "USB 2.0 預設電流(燒錄口,受電端)"),
+)
+# 電流太大、要鋪銅的網(佈線那一步做):(網, 電流 A, 說明)
+POURS = (
+    ("SW", 12.0, "LM5146 開關節點:Q10 源極 / Q11 汲極 → L10(輸出 12 A)"),
+    ("SW3", 8.0, "TPS568230 開關節點 → L20(輸出 8 A)"),
+)
+# 降壓器輸出 → 內層平面的過孔:(網, 電流 A, 說明)。佈線後檢查 L10/L20 旁的過孔數。
+VIA_LINKS = (
+    ("+5V", 6.5, "L10 → In2 +5V 平面(CM5、40-pin、風扇;見 CORRIDORS)"),
+    ("+3V3", 4.0, "L20 → In2 +3V3 平面(Hub、LAN7800、M.2;見 CORRIDORS)"),
+)
+OUTER_CU_MM = 0.035     # JLC04161H 外層 1 oz(jlcpcb.com/impedance)
+VIA_PLATING_MM = 0.018  # JLC 孔銅最小 18 µm
 
 
 def placement(net_path: Path) -> dict:
@@ -98,12 +136,57 @@ INNER_CU_MM = 0.0152   # JLC04161H 內層 0.5 oz 實際厚度(jlcpcb.com/impedan
 TEMP_RISE = 10.0       # °C
 
 
+def ipc2221_area_mil2(amps: float, k: float) -> float:
+    """IPC-2221 §6.2:I = k·ΔT^0.44·A^0.725 → 截面積 A(mil²)。外層 k = 0.048、內層 0.024。"""
+    return (amps / (k * TEMP_RISE ** 0.44)) ** (1 / 0.725)
+
+
+def ipc2221_outer_width(amps: float) -> float:
+    """外層走線需要的寬度 mm。"""
+    return ipc2221_area_mil2(amps, 0.048) / (OUTER_CU_MM / 0.0254) * 0.0254
+
+
+def via_amps() -> float:
+    """一個過孔(鑽孔 VIA_DRILL、孔銅 VIA_PLATING_MM)能流的電流:孔壁截面積套內層公式(保守)。"""
+    area_mm2 = math.pi * pcbgen.VIA_DRILL * VIA_PLATING_MM
+    return 0.024 * TEMP_RISE ** 0.44 * (area_mm2 / 0.0254 ** 2) ** 0.725
+
+
+def class_width(net: str) -> float:
+    """這條網的走線寬度 mm(網路類別 → Power → 預設)。"""
+    for _, width, _, *patterns in NETCLASSES:
+        if any(fnmatch.fnmatchcase(net, p) for p in patterns):
+            return width
+    return pcbgen.POWER_W if net in POWER else pcbgen.TRACK_W
+
+
+def power_width_problems(nets) -> list[str]:
+    """CURRENTS 每條網的類別線寬 ≥ IPC-2221 外層寬度;回傳問題清單(空 = 通過)。"""
+    problems = []
+    print(f"外層電源走線(IPC-2221 外層 {OUTER_CU_MM} mm 銅、溫升 {TEMP_RISE:g} °C):")
+    for net, amps, why in CURRENTS:
+        if net not in nets:
+            problems.append(f"CURRENTS 的 {net} 不在網表裡")
+            continue
+        need, have = ipc2221_outer_width(amps), class_width(net)
+        tag = "OK" if have >= need else "!!"
+        print(f"  {tag} {net:10} {amps:5.2f} A  線寬 {have:4.2f} mm(需要 {need:4.2f})  {why}")
+        if have < need:
+            problems.append(f"{net} 線寬 {have} mm < IPC-2221 {need:.2f} mm({amps} A)")
+    for net, amps, why in POURS:
+        print(f"  鋪銅 {net:8} {amps:5.1f} A  需要 {ipc2221_outer_width(amps):4.1f} mm 寬的銅  {why}")
+    per_via = via_amps()
+    print(f"過孔(鑽 {pcbgen.VIA_DRILL} mm、孔銅 {VIA_PLATING_MM * 1000:g} µm):每個 {per_via:.2f} A")
+    for net, amps, why in VIA_LINKS:
+        print(f"  {net:5} {amps:4.1f} A → 至少 {math.ceil(amps / per_via)} 個過孔  {why}")
+    return problems
+
+
 def ipc2221_inner_width(amps: float) -> float:
     """IPC-2221 §6.2 內層:I = 0.024·ΔT^0.44·A^0.725(A 為截面積 mil²)→ 需要的寬度 mm。
 
     這條公式對大面積平面很保守(IPC-2152 允許更小),當作下限檢查用。"""
-    area_mil2 = (amps / (0.024 * TEMP_RISE ** 0.44)) ** (1 / 0.725)
-    return area_mil2 / (INNER_CU_MM / 0.0254) * 0.0254
+    return ipc2221_area_mil2(amps, 0.024) / (INNER_CU_MM / 0.0254) * 0.0254
 
 
 def add_planes(board) -> list[str]:
@@ -155,8 +238,9 @@ if __name__ == "__main__":
     board = pcbnew.LoadBoard(str(out))
     print(f"內層平面(IPC-2221 內層 {INNER_CU_MM} mm 銅、溫升 {TEMP_RISE:g} °C):")
     bad = add_planes(board)
+    bad += power_width_problems({n.GetNetname() for n in board.GetNetsByName().values()})
     if bad:
-        print("!! 電源平面自檢失敗,拒絕寫出:")
+        print("!! 電源自檢失敗,拒絕寫出:")
         for p in bad:
             print("   ", p)
         out.unlink()  # build() 已經寫出沒有平面的板檔;不留半成品
