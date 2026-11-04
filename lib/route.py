@@ -4,7 +4,7 @@
     pcbgen.py            网表 → usbc-ldo.kicad_pcb(放件、板框、规则)
     route.py dsn         导出 usbc-ldo.dsn
     freerouting          usbc-ldo.dsn → usbc-ldo.ses
-    route.py ses         导入 .ses、铺 GND、填充、存档
+    route.py ses         导入 .ses、铺 GND、填充、存档(板上原有的铜区,如内层电源平面,保留)
 
 freerouting 2.5.0 的原生 CLI 在 KiCad 10 的 DSN 上会崩(上游 #957),
 用 jar 版 + Java 25:
@@ -53,16 +53,40 @@ def gnd_pour(board, layer) -> None:
     board.Add(zone)
 
 
-def import_ses(pcb: Path, ses: Path) -> None:
-    board = pcbnew.LoadBoard(str(pcb))
-    # 重复执行时先清掉上一轮的走线、过孔与铺铜,避免叠加
+def is_own_pour(board, zone) -> bool:
+    """gnd_pour 铺的铜:外层、GND、没有名字、不是规则区。
+
+    板子生成器自己加的铜区(cm5 的内层 GND / +5V / +3V3 平面)都有名字,不算。
+    """
+    return (
+        not zone.GetIsRuleArea()
+        and zone.GetZoneName() == ""
+        and zone.GetNetname() == "GND"
+        and zone.GetFirstLayer() in (pcbnew.F_Cu, pcbnew.B_Cu)
+    )
+
+
+def clear_routing(board) -> None:
+    """清掉上一轮的走线、过孔、gnd_pour 的铺铜,以及规则区(布线禁止区)。
+
+    规则区只在布线时有用:relay8 的 mains_route_* 禁止低压线进市电区,导入后
+    gen/pcb.py finish 补回市电走线、改加只禁铺铜的 mains_nofill_*。
+    其他铜区(内层电源平面)保留:以前这里删掉所有 zone,cm5 的平面会被清空。
+    """
     # 用 Delete 不用 Remove:Remove 把所有权交回 Python(thisown=1),删完走线再删 zone 时
     # 会报 'SwigPyObject has no attribute thisown',或直接让 pcbnew 崩溃(0xC0000005)。
     # 前两块板放件时板上没有 zone,这段从没真正执行过;继电器板带着布线禁止区才踩到。
     for t in list(board.GetTracks()):
         board.Delete(t)
     for z in [board.GetArea(i) for i in range(board.GetAreaCount())]:
-        board.Delete(z)
+        if z.GetIsRuleArea() or is_own_pour(board, z):
+            board.Delete(z)
+
+
+def import_ses(pcb: Path, ses: Path) -> None:
+    board = pcbnew.LoadBoard(str(pcb))
+    # 重复执行时先清掉上一轮的结果,避免叠加
+    clear_routing(board)
     if not pcbnew.ImportSpecctraSES(board, str(ses)):
         raise SystemExit("ImportSpecctraSES 失败")
     tracks = [t for t in board.GetTracks() if t.Type() == pcbnew.PCB_TRACE_T]
@@ -74,7 +98,9 @@ def import_ses(pcb: Path, ses: Path) -> None:
 
     stable_uuids(board, pcb.stem)
     board.Save(str(pcb))
-    print(f"imported {ses.name}: {len(tracks)} tracks, {len(vias)} vias; GND poured on F/B.Cu")
+    kept = sum(1 for z in board.Zones() if not is_own_pour(board, z))
+    print(f"imported {ses.name}: {len(tracks)} tracks, {len(vias)} vias; GND poured on F/B.Cu"
+          + (f"; kept {kept} existing zones" if kept else ""))
 
 
 if __name__ == "__main__":

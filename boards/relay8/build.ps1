@@ -19,7 +19,7 @@ Step 'DSN'           { & $kpy "$Lib\route.py" dsn relay8 . }
 Step 'autoroute'     {
     Invoke-Freerouting relay8.dsn relay8.ses 60 @('--router.automatic_neckdown=false', '--router.neck_width_um=150') 16
 }
-# route.py deletes every track and zone (keepouts included) before importing,
+# route.py deletes every track and rule area (keepouts included) before importing,
 # so the finish stage re-adds the mains tracks and adds GND-pour keepouts.
 Step 'import'        { & $kpy "$Lib\route.py" ses relay8 . }
 Step 'mains finish'  { & $kpy gen/pcb.py finish }

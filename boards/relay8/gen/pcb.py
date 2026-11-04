@@ -2,7 +2,7 @@
 
     pcb.py place    网表 → 放件 → 开槽 → 市电铜(汇流排、COM/N 竖线、NO/NC、输入区)
                     → 低压布线禁止区 → 端子丝印 → DRC 规则文件
-    (freerouting 只布低压线;lib/route.py ses 导入并铺 GND —— 它会删掉所有 zone,包括禁止区)
+    (freerouting 只布低压线;lib/route.py ses 导入并铺 GND —— 它会删掉所有规则区,包括禁止区)
     pcb.py finish   补回市电铜 → GND 铺铜禁止区 → 重新填充
 
 板子 232 × 110 mm,y 向下。上缘:J20 市电输入 + 8 个输出端子(NO · N · NC);其下两条
