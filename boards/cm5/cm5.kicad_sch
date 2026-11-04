@@ -25039,25 +25039,25 @@
 		(effects (font (size 1.27 1.27)) (justify left))
 		(uuid c847eebe-d1b4-4ec5-8f64-c559823f4310)
 	)
-	(global_label "ETH1_P"
+	(global_label "ETH1_N"
 		(shape input)
 		(at 695.96 134.62 180)
 		(effects (font (size 1.27 1.27)) (justify left))
 		(uuid ae87a6c7-e431-4181-afbb-ab45f1c4a589)
 	)
-	(global_label "ETH1_N"
+	(global_label "ETH1_P"
 		(shape input)
 		(at 695.96 137.16 180)
 		(effects (font (size 1.27 1.27)) (justify left))
 		(uuid c1477431-7f2c-4e85-9e98-94dbcf01a310)
 	)
-	(global_label "ETH2_P"
+	(global_label "ETH2_N"
 		(shape input)
 		(at 695.96 139.7 180)
 		(effects (font (size 1.27 1.27)) (justify left))
 		(uuid b8d38367-c78d-470c-9e0e-a016a25ec07c)
 	)
-	(global_label "ETH2_N"
+	(global_label "ETH2_P"
 		(shape input)
 		(at 695.96 142.24 180)
 		(effects (font (size 1.27 1.27)) (justify left))

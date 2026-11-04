@@ -22,7 +22,7 @@ CLASSES = {          # 名字: (線寬, 對內間距) mm
 CHAMFER = 0.8        # 直角切成兩個 45°,切掉的長度
 VIA_PITCH = 1.0      # 換層處一對過孔的中心距
 SKEW_MAX = 0.1       # 對內長度差上限 mm(CM5 規格書 2.3.1 的 PCIe 值,其他介面一併套用)
-GROUP_SKEW = {"HDMI0": 25.0}  # 同一組對與對之間的長度差上限 mm(CM5 規格書 2.5.1)
+GROUP_SKEW = {"HDMI0": 25.0, "乙太網路": 50.0}  # 同一組對與對之間的長度差上限 mm(CM5 規格書 2.5.1、2.2.1)
 KEEP = 0.3          # 自動擺件離差分線(含兩側)至少這麼遠
 VIA_LEN = 1.6        # 一個 F.Cu ↔ B.Cu 過孔的長度 = 板厚(JLC04161H-3313)
 TWIST_VIA = 0.8      # 扭轉時下穿那條的過孔離中心線
@@ -111,6 +111,35 @@ PAIRS = (
         ("via", (103.3, 54.6)),
         ("F.Cu", [(103.3, 55.3), (103.3, 56.4), (126.0, 56.4), (126.0, 75.75), (107.3, 75.75)]),
     ]),
+    # CM5 乙太網路(J1 → U30/U31 → J30)。J1 頂排(ETH1、ETH0)往北出、繞過 J1 西端,底排(ETH3、ETH2)
+    # 往南出包在裡面,四對在 J1 南邊往西,x ≈ 83–87 往南(H8 南邊、U61 西邊),y ≈ 83–89 往西時在
+    # x ≈ 75–81 從 HDMI0 底下穿過(L3 為 +3V3),再往南穿過 ESD 腳下(直通式)進 J30。
+    # J30 的 Pair1(4、7 腳)夾著 Pair2(5、6 腳):ETH2 在 U31 後面下到 B.Cu,直接接插件腳。
+    # ETH1、ETH2 兩端手性相反,在 J30 那端對內對調(gen/board.py)。換層處過孔對相距 2 mm 的車道才放得下。
+    *(("乙太網路 " + n, f"ETH{n}_P", f"ETH{n}_N", "100", ("J1",), ("J30",), [
+        ("F.Cu", head + [(xc, ylane), (82.0, ylane)]),
+        ("via", (81.3, ylane)),
+        ("B.Cu", [(80.6, ylane), (75.7, ylane)]),
+        ("via", (75.0, ylane)),
+        # 過了 HDMI 車道收回 1.4 mm 間距、整組往南(U41 南側留給它的去耦電容);
+        # ESD 上方兩對相距 2 mm(中間放地過孔),到 y 90.6 才併到 ESD 腳的位置
+        ("F.Cu", [(74.3, ylane), *([(73.0, ylane), (73.0 - (yw - ylane), yw)] if yw != ylane else []),
+                  (xs, yw), (xs, 90.6),
+                  (xe, 90.6 + abs(xe - xs)), (xe, 91.7)]),
+        ("thru", esd),
+        *tail,
+    ]) for n, head, xc, ylane, yw, xs, xe, esd, tail in (
+        ("0", [(104.5, 62.9), (104.5, 59.4), (99.4, 59.4), (99.4, 68.4), (82.8, 68.4)], 82.8, 83.4, 85.2, 46.2, 46.45, "U30",
+         [("F.Cu", [(46.45, 94.3), (46.45, 95.2)])]),
+        ("1", [(103.3, 62.9), (103.3, 60.8), (100.8, 60.8), (100.8, 69.8), (84.2, 69.8)], 84.2, 85.4, 86.6, 48.2, 47.95, "U30",
+         # 整對往東移 0.31,讓 N 正對 4 腳(48.09)
+         [("F.Cu", [(47.95, 94.3), (47.95, 94.5), (48.2625, 94.8125), (48.2625, 95.4)])]),
+        ("3", [(103.3, 67.1), (103.3, 71.2), (85.6, 71.2)], 85.6, 87.4, 88.0, 53.8, 54.05, "U31",
+         [("F.Cu", [(54.05, 94.3), (54.05, 95.2)])]),
+        ("2", [(104.5, 67.1), (104.5, 72.6), (87.0, 72.6)], 87.0, 89.4, 89.4, 55.8, 55.55, "U31",
+         [("F.Cu", [(55.55, 94.3), (55.55, 94.7)]), ("via", (55.55, 95.4)),
+          ("B.Cu", [(55.55, 96.1), (55.55, 97.0), (50.0, 97.0), (50.0, 98.0)])]),
+    )),
     # HDMI0 在 J2 頂排東端往北出,向東繞過 J2(H5 西側)往南,從模組底下往西,到 x ≈ 76–80 往南,
     # 斜切到 J70。x ≈ 71–75 留給 LAN1 那組往南。J2 那端由西到東 D2、D1、D0、CK,
     # J70 那端由東到西 D2…CK:沿行進方向都是 D2 在左,不交叉。
@@ -125,7 +154,8 @@ PAIRS = (
     )),
 )
 # 終點焊盤的 P、N 中間夾著別的焊盤(J70 每對中間是地腳):最後一點之後先 45° 分開到焊盤正上方再直下
-FAN = {"HDMI0 D2", "HDMI0 D1", "HDMI0 D0", "HDMI0 CK"}
+FAN = {"HDMI0 D2", "HDMI0 D1", "HDMI0 D0", "HDMI0 CK",
+       "乙太網路 0", "乙太網路 1", "乙太網路 2", "乙太網路 3"}
 
 # 差分線旁邊的其他手佈件:(網, 層, 線寬, [點…]) 與過孔 (網, x, y)
 EXTRA_TRACKS = (
@@ -141,6 +171,8 @@ EXTRA_TRACKS = (
     ("GND", "F.Cu", 0.25, [(4.45, 14.75), (5.725, 14.75)]),
     # J70 夾在各對 P、N 之間的地腳(2、5、8、11)從南端拉出來打過孔
     *(("GND", "F.Cu", 0.25, [(x, 109.8), (x, 110.7)]) for x in (73.0, 71.5, 70.0, 68.5)),
+    # U30/U31 的地腳(3、8)夾在兩對中間:連起來,往北拉到兩對間距 2 mm 處打地過孔
+    *(("GND", "F.Cu", 0.2, [(x, 90.0), (x, 93.385)]) for x in (47.2, 54.8)),
 )
 EXTRA_VIAS = (
     ("LAN0_1V2", 51.1, 62.25), ("LAN0_1V2", 50.4, 65.6),
@@ -148,6 +180,7 @@ EXTRA_VIAS = (
     # M.2 奇數排的地腳夾在 PCIe 各對之間,外側被走線圍住:就地打到 In1
     ("GND", 4.3, 11.75), ("GND", 4.3, 13.25), ("GND", 4.45, 14.75),
     *(("GND", x, 110.7) for x in (73.0, 71.5, 70.0, 68.5)),
+    *(("GND", x, 90.0) for x in (47.2, 54.8)),
 )
 
 
@@ -197,6 +230,13 @@ def _knee(a, pad, d):
     return (a[0] + d[0] * abs(lat) + n[0] * lat, a[1] + d[1] * abs(lat) + n[1] * lat)
 
 
+def _knee_out(pad, b, d):
+    """_knee 反過來:從焊盤沿 d 直走,再 45° 斜到 b。"""
+    along = (b[0] - pad[0]) * d[0] + (b[1] - pad[1]) * d[1]
+    lat = math.dist(b, (pad[0] + d[0] * along, pad[1] + d[1] * along))
+    return (pad[0] + d[0] * (along - lat), pad[1] + d[1] * (along - lat))
+
+
 def _length(pts) -> float:
     return sum(math.dist(a, b) for a, b in zip(pts, pts[1:]))
 
@@ -206,8 +246,9 @@ def _closer(p, n, a, b) -> bool:
     return math.dist(p, a) + math.dist(n, b) <= math.dist(p, b) + math.dist(n, a)
 
 
-def route(pair, start: dict, end: dict):
-    """start / end:{"P": (x, y), "N": (x, y)}(焊盤中心)。
+def route(pair, start: dict, end: dict, pads=None):
+    """start / end:{"P": (x, y), "N": (x, y)}(焊盤中心)。pads(位號, 網) → 該零件上這條網的焊盤中心
+    (路徑裡有 ("thru", 位號) 時用:直通式零件,線從進來那側的焊盤穿過腳下到另一側)。
     回傳 (走線 [(網, 層, 線寬, [點…])], 過孔 [(網, x, y)], 長度 {"P", "N"}, 問題 [str])。"""
     name, pnet, nnet, cls, _, _, path = pair
     w, gap = CLASSES[cls]
@@ -216,8 +257,9 @@ def route(pair, start: dict, end: dict):
     length = {"P": 0.0, "N": 0.0}
     via_len = {"P": 0.0, "N": 0.0}   # 只算扭轉多出來的過孔(換層時 P、N 各兩個,互相抵掉)
     term = start
+    after_thru = False
     for k, item in enumerate(path):
-        if item[0] in ("via", "twist"):
+        if item[0] in ("via", "twist", "thru"):
             continue
         layer, pts = item
         pts = chamfer(pts)
@@ -240,6 +282,22 @@ def route(pair, start: dict, end: dict):
                 via_len[key] += VIA_LEN * len(tw_vias[role[key]])
             term = {key: after[role[key]] for key in ("P", "N")}
             continue
+        if k + 1 < len(path) and path[k + 1][0] == "thru":
+            ref = path[k + 1][1]
+            near = {key: min(pads(ref, net), key=lambda q: math.dist(q, side[-1]))
+                    for key, net, side in (("P", pnet, sp), ("N", nnet, sn))}
+            if not _closer(near["P"], near["N"], sp[-1], sn[-1]):
+                problems.append(f"{name}:{ref} 進來那側的 P/N 在行進方向的另一側")
+            far = {key: max(pads(ref, net), key=lambda q: math.dist(q, near[key]))
+                   for key, net in (("P", pnet), ("N", nnet))}
+            d = _unit(pts[-2], pts[-1])
+            for key, net, side in (("P", pnet, sp), ("N", nnet, sn)):
+                line = [term[key]] + side + [_knee(side[-1], near[key], d), near[key], far[key]]
+                tracks.append((net, layer, w, line))
+                length[key] += _length(line)
+            term = far
+            after_thru = True
+            continue
         if k + 1 < len(path):
             cx, cy = path[k + 1][1]
             d = _unit(pts[-2], pts[-1])
@@ -253,10 +311,13 @@ def route(pair, start: dict, end: dict):
                 problems.append(f"{name}:終點的 P/N 在行進方向的另一側(兩端手性相反,要扭轉)")
         for key, net, side in (("P", pnet, sp), ("N", nnet, sn)):
             knee = [_knee(side[-1], nxt[key], _unit(pts[-2], pts[-1]))] if nxt is end and name in FAN else []
-            line = [term[key]] + side + knee + [nxt[key]]
+            # 剛穿過直通式零件:先沿行進方向直出焊盤,再 45° 併到這段的位置
+            out = [_knee_out(term[key], side[0], _unit(pts[0], pts[1]))] if after_thru else []
+            line = [term[key]] + out + side + knee + [nxt[key]]
             tracks.append((net, layer, w, line))
             length[key] += _length(line)
         term = nxt
+        after_thru = False
     length = {k: length[k] + via_len[k] for k in length}
     skew = abs(length["P"] - length["N"])
     if skew > SKEW_MAX:
@@ -305,43 +366,49 @@ def _dist_to_line(p, line) -> float:
 
 
 def _compensate(tracks, short: str, other: str, skew: float) -> bool:
-    """在較短那條線最長的水平 / 垂直段上加 45° 梯形凸起(朝遠離另一條的方向)補長度。
+    """在較短那條線的水平 / 垂直段上加 45° 梯形凸起(朝遠離另一條的方向)補長度。
 
-    每個凸起多出 2a(√2 − 1)(a 為高度);個數取 a ≤ BUMP_MAX 的最少個,a 依此算到剛好補齊。"""
+    每個凸起多出 2a(√2 − 1)(a 為高度,≤ BUMP_MAX)。從最長那段開始放,一段放不下就接著放次長的,
+    最後一批的 a 算到剛好補齊。回傳有沒有加。"""
     per = 2 * (math.sqrt(2) - 1)
-    n = math.ceil(skew / (per * BUMP_MAX))
-    a = skew / (n * per)
-    need = n * (2 * a + BUMP_TOP) + (n - 1) * BUMP_GAP + 2  # 兩端各留 1 mm
-    best = None
-    for ti, (net, layer, w, line) in enumerate(tracks):
-        if net != short:
-            continue
-        partner = [p for t in tracks if t[0] == other and t[1] == layer for p in t[3]]
-        for si, (p, q) in enumerate(zip(line, line[1:])):
-            L = math.dist(p, q)
-            axis = abs(p[0] - q[0]) < 1e-9 or abs(p[1] - q[1]) < 1e-9
-            if axis and L >= need and partner and (best is None or L > best[0]):
-                best = (L, ti, si, partner)
-    if best is None:
-        return False
-    L, ti, si, partner = best
-    net, layer, w, line = tracks[ti]
-    p, q = line[si], line[si + 1]
-    d = _unit(p, q)
-    mid = ((p[0] + q[0]) / 2, (p[1] + q[1]) / 2)
-    nrm = (d[1], -d[0])
-    probe = lambda s: _dist_to_line((mid[0] + s * nrm[0] * 0.5, mid[1] + s * nrm[1] * 0.5), partner)  # noqa: E731
-    if probe(1) < probe(-1):
-        nrm = (-nrm[0], -nrm[1])
-    span = n * (2 * a + BUMP_TOP) + (n - 1) * BUMP_GAP
-    s0 = (L - span) / 2
-    pts = []
-    for i in range(n):
-        s = s0 + i * (2 * a + BUMP_TOP + BUMP_GAP)
-        for along, out in ((s, 0), (s + a, a), (s + a + BUMP_TOP, a), (s + 2 * a + BUMP_TOP, 0)):
-            pts.append((p[0] + d[0] * along + nrm[0] * out, p[1] + d[1] * along + nrm[1] * out))
-    tracks[ti] = (net, layer, w, line[:si + 1] + pts + line[si + 1:])
-    return True
+    pitch = 2 * BUMP_MAX + BUMP_TOP + BUMP_GAP
+    rem, done = skew, False
+    while rem > 1e-6:
+        best = None
+        for ti, (net, layer, w, line) in enumerate(tracks):
+            if net != short:
+                continue
+            partner = [p for t in tracks if t[0] == other and t[1] == layer for p in t[3]]
+            for si, (p, q) in enumerate(zip(line, line[1:])):
+                L = math.dist(p, q)
+                axis = abs(p[0] - q[0]) < 1e-9 or abs(p[1] - q[1]) < 1e-9
+                if axis and L >= pitch - BUMP_GAP + 2 and partner and (best is None or L > best[0]):
+                    best = (L, ti, si, partner)
+        if best is None:
+            return done
+        L, ti, si, partner = best
+        n_need = math.ceil(rem / (per * BUMP_MAX))
+        n = min(n_need, int((L - 2 + BUMP_GAP) // pitch))  # 兩端各留 1 mm
+        a = rem / (n * per) if n == n_need else BUMP_MAX
+        net, layer, w, line = tracks[ti]
+        p, q = line[si], line[si + 1]
+        d = _unit(p, q)
+        mid = ((p[0] + q[0]) / 2, (p[1] + q[1]) / 2)
+        nrm = (d[1], -d[0])
+        probe = lambda s: _dist_to_line((mid[0] + s * nrm[0] * 0.5, mid[1] + s * nrm[1] * 0.5), partner)  # noqa: E731
+        if probe(1) < probe(-1):
+            nrm = (-nrm[0], -nrm[1])
+        span = n * (2 * a + BUMP_TOP) + (n - 1) * BUMP_GAP
+        s0 = (L - span) / 2
+        pts = []
+        for i in range(n):
+            s = s0 + i * (2 * a + BUMP_TOP + BUMP_GAP)
+            for along, out in ((s, 0), (s + a, a), (s + a + BUMP_TOP, a), (s + 2 * a + BUMP_TOP, 0)):
+                pts.append((p[0] + d[0] * along + nrm[0] * out, p[1] + d[1] * along + nrm[1] * out))
+        tracks[ti] = (net, layer, w, line[:si + 1] + pts + line[si + 1:])
+        rem -= n * per * a
+        done = True
+    return done
 
 
 def dru() -> str:
