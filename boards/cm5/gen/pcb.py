@@ -230,6 +230,30 @@ def add_planes(board) -> list[str]:
     return problems
 
 
+def tidy_silk(board) -> None:
+    """位號超出板框、或壓到任何絲印圖形(含自己的)時移到 F.Fab(不印)。
+    原則同 pcbgen.move_clashing_refs:不印總比印一半好。
+
+    接頭(OVERHANG)本體的絲印伸出板邊是刻意的(開口切齊板邊),板廠會裁掉,DRC 的
+    silk_edge_clearance 警告留著;不刪封裝裡的線,否則封裝和庫不一致(lib_footprint_mismatch)。"""
+    edge = board.GetBoardEdgesBoundingBox()
+    silk = [g for fp in board.GetFootprints() for g in fp.GraphicalItems()
+            if g.GetLayer() == pcbnew.F_SilkS and g.Type() != pcbnew.PCB_TEXT_T]
+    moved = []
+    for fp in board.GetFootprints():
+        ref = fp.Reference()
+        if ref.GetLayer() != pcbnew.F_SilkS:
+            continue
+        # 用字形的實際外形比,不用外接框:外接框會把一堆其實沒碰到的位號也移走
+        shape = ref.GetEffectiveShape(pcbnew.F_SilkS)
+        if (not edge.Contains(shape.BBox())
+                or any(shape.Collide(g.GetEffectiveShape(pcbnew.F_SilkS), 0) for g in silk)):
+            ref.SetLayer(pcbnew.F_Fab)
+            moved.append(fp.GetReference())
+    if moved:
+        print(f"位號出板或壓到絲印,移到 F.Fab: {', '.join(sorted(moved))}")
+
+
 def decap_report(board, worst: int = 5) -> None:
     """IC 腳 → 同一條網上最近的對地電容(焊盤中心距離)。只報告,不擋:清單也包含 EN 這類不需要
     去耦的腳,哪些該去耦以 review.py 的 decoupling 規則為準。"""
@@ -276,5 +300,6 @@ if __name__ == "__main__":
         out.unlink()  # build() 已經寫出沒有平面的板檔;不留半成品
         raise SystemExit(1)
     decap_report(board)
+    tidy_silk(board)
     pcbgen.stable_uuids(board, "cm5")
     pcbnew.SaveBoard(str(out), board)
