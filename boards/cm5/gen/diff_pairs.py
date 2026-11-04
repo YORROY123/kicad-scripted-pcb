@@ -22,7 +22,8 @@ CLASSES = {          # 名字: (線寬, 對內間距) mm
 CHAMFER = 0.8        # 直角切成兩個 45°,切掉的長度
 VIA_PITCH = 1.0      # 換層處一對過孔的中心距
 SKEW_MAX = 0.1       # 對內長度差上限 mm(CM5 規格書 2.3.1 的 PCIe 值,其他介面一併套用)
-KEEP = 0.3           # 自動擺件離差分線(含兩側)至少這麼遠
+GROUP_SKEW = {"HDMI0": 25.0}  # 同一組對與對之間的長度差上限 mm(CM5 規格書 2.5.1)
+KEEP = 0.3          # 自動擺件離差分線(含兩側)至少這麼遠
 
 # PCIe 在 J2 頂排往北出;REFCLK / TX 一路在 F.Cu,RX 在 x≈45 從 TX 底下穿過(J2 那端由北到南是
 # TX、RX、CLK,插座那端要 RX、TX、CLK),再從插座南端繞到腳後(奇數腳在靠板邊那排)。
@@ -70,7 +71,21 @@ PAIRS = (
         ("via", (61.0, 64.6)),
         ("F.Cu", [(60.3, 64.6), (52.0, 64.6), (51.4, 64.0), (50.6, 64.0)]),
     ]),
+    # HDMI0 在 J2 頂排東端往北出,向東繞過 J2(H5 西側)往南,從模組底下往西,到 x ≈ 76–80 往南,
+    # 斜切到 J70。x ≈ 71–75 留給 LAN1 那組往南。J2 那端由西到東 D2、D1、D0、CK,
+    # J70 那端由東到西 D2…CK:沿行進方向都是 D2 在左,不交叉。
+    *(("HDMI0 " + lane, f"HDMI0_{lane}_P", f"HDMI0_{lane}_N", "100", ("J2",), ("J70",), [
+        ("F.Cu", [(x0, 28.9), (x0, yn), (xe, yn), (xe, yw), (xd, yw), (xd, yk),
+                  (xj, yk + xd - xj), (xj, 106.5)]),
+    ]) for lane, x0, yn, xe, yw, xd, yk, xj in (
+        ("D2", 116.5, 23.2, 129.2, 52.2, 80.2, 97.6, 73.0),
+        ("D1", 117.7, 24.6, 127.8, 50.8, 78.8, 97.4, 71.5),
+        ("D0", 118.9, 26.0, 126.4, 49.4, 77.4, 97.2, 70.0),
+        ("CK", 120.1, 27.4, 125.0, 48.0, 76.0, 97.0, 68.5),
+    )),
 )
+# 終點焊盤的 P、N 中間夾著別的焊盤(J70 每對中間是地腳):最後一點之後先 45° 分開到焊盤正上方再直下
+FAN = {"HDMI0 D2", "HDMI0 D1", "HDMI0 D0", "HDMI0 CK"}
 
 # 差分線旁邊的其他手佈件:(網, 層, 線寬, [點…]) 與過孔 (網, x, y)
 EXTRA_TRACKS = (
@@ -82,11 +97,14 @@ EXTRA_TRACKS = (
     ("GND", "F.Cu", 0.25, [(4.3, 11.75), (5.725, 11.75)]),
     ("GND", "F.Cu", 0.25, [(4.3, 13.25), (5.725, 13.25)]),
     ("GND", "F.Cu", 0.25, [(4.45, 14.75), (5.725, 14.75)]),
+    # J70 夾在各對 P、N 之間的地腳(2、5、8、11)從南端拉出來打過孔
+    *(("GND", "F.Cu", 0.25, [(x, 109.8), (x, 110.7)]) for x in (73.0, 71.5, 70.0, 68.5)),
 )
 EXTRA_VIAS = (
     ("LAN0_1V2", 51.1, 62.25), ("LAN0_1V2", 50.4, 65.6),
     # M.2 奇數排的地腳夾在 PCIe 各對之間,外側被走線圍住:就地打到 In1
     ("GND", 4.3, 11.75), ("GND", 4.3, 13.25), ("GND", 4.45, 14.75),
+    *(("GND", x, 110.7) for x in (73.0, 71.5, 70.0, 68.5)),
 )
 
 
@@ -129,6 +147,13 @@ def offset(pts, h: float) -> list:
     return out
 
 
+def _knee(a, pad, d):
+    """從 a 沿 d 斜 45° 走到焊盤正上方(之後沿 d 直進焊盤)。"""
+    n = (d[1], -d[0])
+    lat = (pad[0] - a[0]) * n[0] + (pad[1] - a[1]) * n[1]
+    return (a[0] + d[0] * abs(lat) + n[0] * lat, a[1] + d[1] * abs(lat) + n[1] * lat)
+
+
 def _length(pts) -> float:
     return sum(math.dist(a, b) for a, b in zip(pts, pts[1:]))
 
@@ -166,7 +191,8 @@ def route(pair, start: dict, end: dict):
             if not _closer(end["P"], end["N"], sp[-1], sn[-1]):
                 problems.append(f"{name}:終點的 P/N 在行進方向的另一側(兩端手性相反,要扭轉)")
         for key, net, side in (("P", pnet, sp), ("N", nnet, sn)):
-            line = [term[key]] + side + [nxt[key]]
+            knee = [_knee(side[-1], nxt[key], _unit(pts[-2], pts[-1]))] if nxt is end and name in FAN else []
+            line = [term[key]] + side + knee + [nxt[key]]
             tracks.append((net, layer, w, line))
             length[key] += _length(line)
         term = nxt
@@ -238,14 +264,19 @@ def _compensate(tracks, short: str, other: str, skew: float) -> bool:
 
 
 def dru() -> str:
-    """對內間距比網路類別的 0.2 mm 小:每一對加一條規則(座標取到 nm 會有捨入,下限留 0.01 mm)。"""
+    """對內間距比網路類別的 0.2 mm 小:每一對加一條規則(座標取到 nm 會有捨入,下限留 0.01 mm)。
+    100 Ω 的線寬 0.145 比網路類別的差分線寬 0.15 窄:再加一條線寬規則。"""
     out = []
     for name, p, n, cls, *_ in PAIRS:
-        gap = CLASSES[cls][1] - 0.01
+        w, gap = CLASSES[cls]
         out.append(f'(rule "diff pair {name}"\n'
                    f'  (condition "(A.NetName == \'{p}\' && B.NetName == \'{n}\') || '
                    f'(A.NetName == \'{n}\' && B.NetName == \'{p}\')")\n'
-                   f'  (constraint clearance (min {gap:g}mm)))\n')
+                   f'  (constraint clearance (min {gap - 0.01:g}mm)))\n')
+        if w < 0.15:
+            out.append(f'(rule "diff pair {name} width"\n'
+                       f'  (condition "A.NetName == \'{p}\' || A.NetName == \'{n}\'")\n'
+                       f'  (constraint track_width (min {w:g}mm)))\n')
     return "".join(out)
 
 
