@@ -25477,13 +25477,13 @@
 		(effects (font (size 1.27 1.27)) (justify left))
 		(uuid 0c274c47-abc6-45b5-8172-6f3f97c09446)
 	)
-	(global_label "LAN0_RX_P"
+	(global_label "LAN0_RX_N"
 		(shape input)
 		(at 198.12 368.3 0)
 		(effects (font (size 1.27 1.27)) (justify left))
 		(uuid 393ccd13-0a79-4413-a490-cdd9241702bd)
 	)
-	(global_label "LAN0_RX_N"
+	(global_label "LAN0_RX_P"
 		(shape input)
 		(at 198.12 370.84 0)
 		(effects (font (size 1.27 1.27)) (justify left))
@@ -25855,7 +25855,7 @@
 		(effects (font (size 1.27 1.27)) (justify left))
 		(uuid b3ef1075-0f37-4852-91af-e377e103b57c)
 	)
-	(global_label "CM5U0_RX_P"
+	(global_label "CM5U0_RX_N"
 		(shape input)
 		(at 228.6 367.03000000000003 270)
 		(effects (font (size 1.27 1.27)) (justify left))
@@ -25867,7 +25867,7 @@
 		(effects (font (size 1.27 1.27)) (justify left))
 		(uuid 31b367be-9b0e-4a9f-bf9d-82d8a43cbad4)
 	)
-	(global_label "CM5U0_RX_N"
+	(global_label "CM5U0_RX_P"
 		(shape input)
 		(at 238.76 367.03000000000003 270)
 		(effects (font (size 1.27 1.27)) (justify left))
@@ -28465,25 +28465,25 @@
 		(effects (font (size 1.27 1.27)) (justify left))
 		(uuid 75a1e90d-4220-4a12-97db-6b88e7cba746)
 	)
-	(global_label "PCIE_RX_P"
+	(global_label "PCIE_RX_N"
 		(shape input)
 		(at 886.46 127.0 180)
 		(effects (font (size 1.27 1.27)) (justify left))
 		(uuid 9ee597e3-dca7-48a5-952d-7f4fb5ff7475)
 	)
-	(global_label "PCIE_RX_N"
+	(global_label "PCIE_RX_P"
 		(shape input)
 		(at 886.46 124.46 180)
 		(effects (font (size 1.27 1.27)) (justify left))
 		(uuid c04e93bf-b0dd-4117-bb27-35058fc3cae8)
 	)
-	(global_label "PCIE_TX_P"
+	(global_label "PCIE_TX_N"
 		(shape input)
 		(at 886.46 121.92 180)
 		(effects (font (size 1.27 1.27)) (justify left))
 		(uuid c9fc7629-9686-4b0b-9046-a7001a0c57fa)
 	)
-	(global_label "PCIE_TX_N"
+	(global_label "PCIE_TX_P"
 		(shape input)
 		(at 886.46 119.38 180)
 		(effects (font (size 1.27 1.27)) (justify left))

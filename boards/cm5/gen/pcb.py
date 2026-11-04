@@ -1,6 +1,7 @@
 """CM5 載板:網表 → cm5.kicad_pcb(板框、4 層、網路類別、固定孔、內層平面、電源級鋪銅、自檢)。
 
-佈線第一階段:兩級降壓的外層鋪銅與過孔(gen/power_stage.py)。其餘還沒佈線。
+佈線第一、二階段:兩級降壓的鋪銅、過孔與閘極驅動(gen/power_stage.py);第三階段:差分線
+(gen/diff_pairs.py)。其餘還沒佈線。
 座標與自動擺件在 gen/placement.py(3D 預覽 concept/ 也用同一份)。
 必須用 KiCad 自帶的 python.exe 跑:
     <KiCad python> gen/pcb.py
@@ -15,6 +16,7 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parents[2] / "lib"))
 import pcbgen  # noqa: E402
 import pcbnew  # noqa: E402
+import diff_pairs  # noqa: E402
 import power_stage  # noqa: E402
 from pcbgen import BoardSpec, build  # noqa: E402
 from placement import BOARD_HOLES, H, MODULE_HOLES, W, auto_place, sch_positions  # noqa: E402
@@ -272,6 +274,74 @@ def add_power_stage(board) -> list[str]:
     return problems
 
 
+def add_diff_pairs(board) -> list[str]:
+    """差分線(gen/diff_pairs.py):鎖定的走線與過孔;檢查手性、對內長度差、每條網接通。回傳問題清單。"""
+    problems = []
+
+    def at_mm(p):
+        return (p.GetPosition().x / 1e6 - pcbgen.ORIGIN[0], p.GetPosition().y / 1e6 - pcbgen.ORIGIN[1])
+
+    def ends(refs, pnet, nnet):
+        pads = {p.GetNetname(): at_mm(p) for r in refs for p in board.FindFootprintByReference(r).Pads()
+                if p.GetNetname() in (pnet, nnet)}
+        return {"P": pads.get(pnet), "N": pads.get(nnet)}
+
+    def via(net, x, y):
+        v = pcbnew.PCB_VIA(board)
+        v.SetPosition(pcbgen.at(x, y))
+        v.SetWidth(pcbgen.mm(pcbgen.VIA_D))
+        v.SetDrill(pcbgen.mm(pcbgen.VIA_DRILL))
+        v.SetNet(board.FindNet(net))
+        v.SetLocked(True)
+        board.Add(v)
+
+    def track(net, layer, w, pts):
+        for a, b in zip(pts, pts[1:]):
+            if math.dist(a, b) < 1e-4:
+                continue
+            t = pcbnew.PCB_TRACK(board)
+            t.SetLayer(board.GetLayerID(layer))
+            t.SetStart(pcbgen.at(*a))
+            t.SetEnd(pcbgen.at(*b))
+            t.SetWidth(pcbgen.mm(w))
+            t.SetNet(board.FindNet(net))
+            t.SetLocked(True)
+            board.Add(t)
+
+    print(f"差分線(對內長度差上限 {diff_pairs.SKEW_MAX} mm):")
+    for pair in diff_pairs.PAIRS:
+        name, pnet, nnet, cls, src, dst = pair[:6]
+        start, end = ends(src, pnet, nnet), ends(dst, pnet, nnet)
+        if None in (*start.values(), *end.values()):
+            problems.append(f"{name}:起訖零件上找不到 {pnet} / {nnet} 的焊盤")
+            continue
+        tracks, vias, length, probs = diff_pairs.route(pair, start, end)
+        problems += probs
+        for t in tracks:
+            track(*t)
+        for v in vias:
+            via(*v)
+        skew = abs(length["P"] - length["N"])
+        print(f"  {'OK' if not probs else '!!'} {name:22} {cls} Ω  長 {length['P']:6.1f} mm  "
+              f"差 {skew:.3f} mm  換層 {len(vias) // 4} 次")
+    for t in diff_pairs.EXTRA_TRACKS:
+        track(*t)
+    for v in diff_pairs.EXTRA_VIAS:
+        via(*v)
+    pcbnew.ZONE_FILLER(board).Fill(board.Zones())  # 平面與電源級鋪銅要讓開新的過孔
+
+    board.BuildConnectivity()
+    conn = board.GetConnectivity()
+    pad_name = lambda p: f"{p.GetParentFootprint().GetReference()}.{p.GetNumber()}"  # noqa: E731
+    for net in [n for pair in diff_pairs.PAIRS for n in pair[1:3]]:
+        pads = [p for p in board.GetPads() if p.GetNetname() == net]
+        reached = {pad_name(x) for x in conn.GetConnectedItems(pads[0]) if x.GetClass() == "PAD"} if pads else set()
+        loose = [pad_name(p) for p in pads if pad_name(p) not in reached]
+        if not pads or loose:
+            problems.append(f"差分線 {net} 沒接通:{', '.join(loose) or '沒有焊盤'}")
+    return problems
+
+
 def ipc2221_inner_width(amps: float) -> float:
     """IPC-2221 §6.2 內層:I = 0.024·ΔT^0.44·A^0.725(A 為截面積 mil²)→ 需要的寬度 mm。
 
@@ -379,15 +449,16 @@ def decap_report(board, worst: int = 5) -> None:
 if __name__ == "__main__":
     net = BOARD / "net.txt"
     out = BOARD / "cm5.kicad_pcb"
-    (BOARD / "cm5.kicad_dru").write_text(DRU, encoding="utf-8")
+    (BOARD / "cm5.kicad_dru").write_text(DRU + diff_pairs.dru(), encoding="utf-8")
     build(spec(placement(net)), net, out)
     board = pcbnew.LoadBoard(str(out))
     print(f"內層平面(IPC-2221 內層 {INNER_CU_MM} mm 銅、溫升 {TEMP_RISE:g} °C):")
     bad = add_planes(board)
     bad += power_width_problems({n.GetNetname() for n in board.GetNetsByName().values()})
     bad += add_power_stage(board)
+    bad += add_diff_pairs(board)
     if bad:
-        print("!! 電源自檢失敗,拒絕寫出:")
+        print("!! 電源 / 差分線自檢失敗,拒絕寫出:")
         for p in bad:
             print("   ", p)
         out.unlink()  # build() 已經寫出沒有平面、鋪銅的板檔;不留半成品

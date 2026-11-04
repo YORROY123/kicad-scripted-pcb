@@ -2,3 +2,24 @@
 (rule "pads within one footprint"
   (condition "A.Type == 'Pad' && B.Type == 'Pad' && A.Parent == B.Parent")
   (constraint clearance (min 0.1mm)))
+(rule "diff pair PCIe REFCLK"
+  (condition "(A.NetName == 'PCIE_CLK_P' && B.NetName == 'PCIE_CLK_N') || (A.NetName == 'PCIE_CLK_N' && B.NetName == 'PCIE_CLK_P')")
+  (constraint clearance (min 0.14mm)))
+(rule "diff pair PCIe TX"
+  (condition "(A.NetName == 'PCIE_TX_P' && B.NetName == 'PCIE_TX_N') || (A.NetName == 'PCIE_TX_N' && B.NetName == 'PCIE_TX_P')")
+  (constraint clearance (min 0.14mm)))
+(rule "diff pair PCIe RX"
+  (condition "(A.NetName == 'PCIE_RX_P' && B.NetName == 'PCIE_RX_N') || (A.NetName == 'PCIE_RX_N' && B.NetName == 'PCIE_RX_P')")
+  (constraint clearance (min 0.14mm)))
+(rule "diff pair USB3-0 RX(CM5 端)"
+  (condition "(A.NetName == 'CM5U0_RX_P' && B.NetName == 'CM5U0_RX_N') || (A.NetName == 'CM5U0_RX_N' && B.NetName == 'CM5U0_RX_P')")
+  (constraint clearance (min 0.14mm)))
+(rule "diff pair USB3-0 TX(LAN7800 端)"
+  (condition "(A.NetName == 'LAN0_TX_P' && B.NetName == 'LAN0_TX_N') || (A.NetName == 'LAN0_TX_N' && B.NetName == 'LAN0_TX_P')")
+  (constraint clearance (min 0.14mm)))
+(rule "diff pair USB3-0 RX(LAN7800 端)"
+  (condition "(A.NetName == 'LAN0_RX_P' && B.NetName == 'LAN0_RX_N') || (A.NetName == 'LAN0_RX_N' && B.NetName == 'LAN0_RX_P')")
+  (constraint clearance (min 0.14mm)))
+(rule "diff pair USB2 LAN0"
+  (condition "(A.NetName == 'LAN0_DP' && B.NetName == 'LAN0_DM') || (A.NetName == 'LAN0_DM' && B.NetName == 'LAN0_DP')")
+  (constraint clearance (min 0.14mm)))

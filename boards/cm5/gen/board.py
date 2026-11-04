@@ -255,6 +255,9 @@ add("R61", "Device", "R", 600, 116, "470", R0402, {"1": "ETH_LEDY_K", "2": "ETH_
 #     ESR 50Ω、CL 20pF);負載電容 2 ×(20 − 雜散約 5)≈ 30pF → 27pF。實物要量頻率。
 #   - USB3:LAN7800 的 TX 要加 100nF 耦合電容(USB 3 規範 75–265nF,放在發送端);
 #     CM5 的 TX 已含電容,直接接 LAN7800 RX。USB2(DP/DM)也要接,USB3 列舉要靠它。
+#   - ss_swap:USB3 兩條 SS 對內 P/N 對調。USB 3.0 規範 §6.4.2 要求接收端自己偵測並修正極性反相,
+#     所以電氣上可以;LAN0 照走線方向(J2 往北出、從東邊進 U40)兩端手性相反,不對調就要在線上扭
+#     (README「差分線」)。USB2 的 DP/DM 不能對調。
 #   - VBUS_DET 接 3.3V(表 3-2:bus-powered 接 VDD33A);RESET_N 接 PG_3V3(+3V3 正常才放開);
 #     TEST 接地;不接 EEPROM:MAC 寫進晶片 OTP(Linux lan78xx 可用 ethtool -E 寫),
 #     EEDI 10k 下拉讓 EEPROM 偵測讀到 00(不是 A5h);PME_MODE 10k 下拉;其餘 GPIO 不接。
@@ -265,7 +268,7 @@ flag("+3V3", 40, 260)      # 由電感(被動)輸出,LAN7800 的 3.3V 電源腳�
 C0805 = "Capacitor_SMD:C_0805_2012Metric"
 
 
-def lan7800(i: int, x: float, y: float) -> None:
+def lan7800(i: int, x: float, y: float, ss_swap: bool = False) -> None:
     u, ref = f"LAN{i}", lambda base: base + 30 * i   # LAN0 用 1xx–121、LAN1 用 130–151
     add(f"U{40 + i}", "CM5_Parts", "LAN7800", x, y, "LAN7800/Y9X",
         "Package_DFN_QFN:QFN-48-1EP_7x7mm_P0.5mm_EP5.3x5.3mm", {
@@ -278,7 +281,7 @@ def lan7800(i: int, x: float, y: float) -> None:
             "1": f"{u}_TR0P", "2": f"{u}_TR0N", "4": f"{u}_TR1P", "5": f"{u}_TR1N",
             "7": f"{u}_TR2P", "8": f"{u}_TR2N", "10": f"{u}_TR3P", "11": f"{u}_TR3N",
             "26": f"{u}_DP", "27": f"{u}_DM", "28": f"{u}_TX_P", "29": f"{u}_TX_N",
-            "31": f"{u}_RX_P", "32": f"{u}_RX_N",
+            "31": f"{u}_RX_{'N' if ss_swap else 'P'}", "32": f"{u}_RX_{'P' if ss_swap else 'N'}",
             "23": "+3V3", "35": "PG_3V3", "34": "GND", "16": None, "17": f"{u}_EEDI",
             "18": f"{u}_LEDG_K", "19": f"{u}_LEDY_K", "24": None, "33": None, "22": None,
             "43": f"{u}_PMEMODE", "49": "GND",
@@ -302,15 +305,15 @@ def lan7800(i: int, x: float, y: float) -> None:
     add(f"C{ref(119)}", "Device", "C", cx + 20, y + 56, "27pF", C0402, {"1": f"{u}_XO", "2": "GND"})
     add(f"R{ref(102)}", "Device", "R", x + 40, y + 20, "10k", R0402, {"1": f"{u}_EEDI", "2": "GND"})
     add(f"R{ref(103)}", "Device", "R", x + 48, y + 20, "10k", R0402, {"1": f"{u}_PMEMODE", "2": "GND"})
-    add(f"C{ref(120)}", "Device", "C", x + 40, y - 6, "100nF", C0402, {"1": f"{u}_TX_P", "2": f"CM5U{i}_RX_P"})
-    add(f"C{ref(121)}", "Device", "C", x + 48, y - 6, "100nF", C0402, {"1": f"{u}_TX_N", "2": f"CM5U{i}_RX_N"})
+    add(f"C{ref(120)}", "Device", "C", x + 40, y - 6, "100nF", C0402, {"1": f"{u}_TX_P", "2": f"CM5U{i}_RX_{'N' if ss_swap else 'P'}"})
+    add(f"C{ref(121)}", "Device", "C", x + 48, y - 6, "100nF", C0402, {"1": f"{u}_TX_N", "2": f"CM5U{i}_RX_{'P' if ss_swap else 'N'}"})
     add(f"D{40 + 2 * i}", "Device", "LED", x + 60, y + 14, "GREEN", LED0805, {"2": "+3V3", "1": f"{u}_LEDG_K2"})
     add(f"R{ref(104)}", "Device", "R", x + 60, y + 28, "470", R0402, {"1": f"{u}_LEDG_K2", "2": f"{u}_LEDG_K"})
     add(f"D{41 + 2 * i}", "Device", "LED", x + 78, y + 14, "YELLOW", LED0805, {"2": "+3V3", "1": f"{u}_LEDY_K2"})
     add(f"R{ref(105)}", "Device", "R", x + 78, y + 28, "470", R0402, {"1": f"{u}_LEDY_K2", "2": f"{u}_LEDY_K"})
 
 
-lan7800(0, 140, 290)
+lan7800(0, 140, 290, ss_swap=True)
 lan7800(1, 140, 400)
 
 # ── 6. 802.3at PoE ×2 ─────────────────────────────────────────────────
@@ -481,9 +484,11 @@ usb_a(1, 218)
 # ── 8. M.2 M-key ──────────────────────────────────────────────────────
 # CM5 規格書 2.3:PCIe Gen2 ×1;CM5 的 TX 已含耦合電容,NVMe 卡的 TX 也自帶(規格書明寫),
 #   接插座時不用交換 TX/RX(訊號以 host 角度命名),對內 P/N 可對調。CLKREQ#、WAKE# 在 CM5 內部上拉。
-# 腳位照官方 CM5 IO 板(rev 2)逐腳:41/43 → CM5 RX_P/RX_N、47/49 → TX_P/TX_N(兩者都對調了 P/N,
-#   官方實際可用;PCIe 鏈結訓練會自動處理極性)、55/53 → REFCLK P/N(時脈不可對調,官方也沒對調)、
-#   50 PERST#、52 CLKREQ#、54 PEWAKE#。只用 lane 0;SUSCLK、PEDET、DEVSLP、LED1# 不接。
+# 腳位照 M.2 規範的腳名:41/43 PERn0/PERp0 → CM5 RX_N/RX_P、47/49 PETn0/PETp0 → TX_N/TX_P、
+#   55/53 → REFCLK P/N(時脈不可對調)、50 PERST#、52 CLKREQ#、54 PEWAKE#。只用 lane 0;
+#   SUSCLK、PEDET、DEVSLP、LED1# 不接。官方 CM5 IO 板(rev 2)把 RX、TX 的 P/N 都對調了(PCIe 鏈結訓練
+#   會自動處理極性,所以兩種都能用);本板照腳名接,因為照本板的走法(J2 往北出、從插座南端繞進腳後)
+#   對調反而要讓 RX、TX 各在線上扭一次(README「差分線」)。
 # 3.3V:官方用一顆獨立降壓、由 PCIE_PWR_EN 開關;本板 +3V3 有 8A 且已跟著 CM5 開關機
 #   → 直接接 +3V3(NVMe 最多約 2.5A),少一顆 IC;代價是 OS 不能單獨重啟 SSD 電源。
 #   去耦:2 × 47µF + 100nF(M.2 規範建議靠近插座)。
@@ -491,7 +496,7 @@ usb_a(1, 218)
 add("J60", "Connector", "Bus_M.2_Socket_M", 720, 120, "M.2 M-key", "CM5:M.2_Socket_M_TE_1-2199230-6", {
     **{p: "+3V3" for p in ("2", "4", "12", "14", "16", "18", "70", "72", "74")},
     **{p: "GND" for p in ("1", "3", "9", "15", "21", "27", "33", "39", "45", "51", "57", "71", "73", "75")},
-    "41": "PCIE_RX_P", "43": "PCIE_RX_N", "47": "PCIE_TX_P", "49": "PCIE_TX_N",
+    "41": "PCIE_RX_N", "43": "PCIE_RX_P", "47": "PCIE_TX_N", "49": "PCIE_TX_P",
     "55": "PCIE_CLK_P", "53": "PCIE_CLK_N",
     "50": "PCIE_nRST", "52": "PCIE_nCLKREQ", "54": "PCIE_nWAKE",
     **{p: None for p in ("5", "7", "11", "13", "17", "19", "23", "25", "29", "31", "35", "37",
