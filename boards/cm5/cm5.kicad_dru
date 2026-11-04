@@ -23,6 +23,21 @@
 (rule "diff pair USB2 LAN0"
   (condition "(A.NetName == 'LAN0_DP' && B.NetName == 'LAN0_DM') || (A.NetName == 'LAN0_DM' && B.NetName == 'LAN0_DP')")
   (constraint clearance (min 0.14mm)))
+(rule "diff pair USB3-1 RX(CM5 端)"
+  (condition "(A.NetName == 'CM5U1_RX_P' && B.NetName == 'CM5U1_RX_N') || (A.NetName == 'CM5U1_RX_N' && B.NetName == 'CM5U1_RX_P')")
+  (constraint clearance (min 0.14mm)))
+(rule "diff pair USB3-1 TX(LAN7800 端)"
+  (condition "(A.NetName == 'LAN1_TX_P' && B.NetName == 'LAN1_TX_N') || (A.NetName == 'LAN1_TX_N' && B.NetName == 'LAN1_TX_P')")
+  (constraint clearance (min 0.14mm)))
+(rule "diff pair USB3-1 RX(LAN7800 端)"
+  (condition "(A.NetName == 'LAN1_RX_P' && B.NetName == 'LAN1_RX_N') || (A.NetName == 'LAN1_RX_N' && B.NetName == 'LAN1_RX_P')")
+  (constraint clearance (min 0.14mm)))
+(rule "diff pair USB2 LAN1"
+  (condition "(A.NetName == 'LAN1_DP' && B.NetName == 'LAN1_DM') || (A.NetName == 'LAN1_DM' && B.NetName == 'LAN1_DP')")
+  (constraint clearance (min 0.14mm)))
+(rule "diff pair USB2 CM5"
+  (condition "(A.NetName == 'CM5_USB_P' && B.NetName == 'CM5_USB_N') || (A.NetName == 'CM5_USB_N' && B.NetName == 'CM5_USB_P')")
+  (constraint clearance (min 0.14mm)))
 (rule "diff pair HDMI0 D2"
   (condition "(A.NetName == 'HDMI0_D2_P' && B.NetName == 'HDMI0_D2_N') || (A.NetName == 'HDMI0_D2_N' && B.NetName == 'HDMI0_D2_P')")
   (constraint clearance (min 0.19mm)))

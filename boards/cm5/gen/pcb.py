@@ -325,7 +325,8 @@ def add_diff_pairs(board) -> list[str]:
         skew = abs(length["P"] - length["N"])
         lengths[name] = length["P"]
         print(f"  {'OK' if not probs else '!!'} {name:22} {cls} Ω  長 {length['P']:6.1f} mm  "
-              f"差 {skew:.3f} mm  換層 {len(vias) // 4} 次")
+              f"差 {skew:.3f} mm  換層 {sum(it[0] == 'via' for it in pair[6]) // 2} 次"
+              + (f"  扭轉 {sum(it[0] == 'twist' for it in pair[6])} 次" if any(it[0] == "twist" for it in pair[6]) else ""))
     for group, limit in diff_pairs.GROUP_SKEW.items():
         got = [v for k, v in lengths.items() if k.startswith(group + " ")]
         spread = max(got) - min(got)
