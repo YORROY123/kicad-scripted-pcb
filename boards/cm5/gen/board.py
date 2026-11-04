@@ -1,4 +1,4 @@
-"""CM5 載板原理圖(進行中)。網路標籤式:本檔就是「引腳 → 網路」對照表,同時寫出 expected_nets.json。
+﻿"""CM5 載板原理圖(進行中)。網路標籤式:本檔就是「引腳 → 網路」對照表,同時寫出 expected_nets.json。
 
 目前完成的區塊
   1. 54V 輸入與 5V 主電源(LM5146)
@@ -550,5 +550,12 @@ add("J81", "Connector_Generic_MountingPin", "Conn_01x04_MountingPin", 720, 400, 
     "Connector_JST:JST_SH_SM04B-SRSS-TB_1x04-1MP_P1.00mm_Horizontal",
     {"1": "+5V", "2": "FAN_PWM", "3": "GND", "4": "FAN_TACHO", "MP": "GND"})
 add("R230", "Device", "R", 690, 400, "10k", R0402, {"1": "CM5_3V3", "2": "FAN_PWM"})
+
+# ── 11. 縫合電容 ───────────────────────────────────────────────────────
+# 差分線換到 B.Cu 下穿時參考面從 In1(GND)換到 In2(電源),每處換層旁一顆 100 nF 讓回流跨過去。
+# 位號、電源與擺位在 gen/diff_pairs.py 的 STITCH(In2 上 x ≥ 60.25 且 y ≤ 71.75 是 +5V,其餘 +3V3)。
+import diff_pairs  # noqa: E402
+for k, (ref, net, *_) in enumerate(diff_pairs.STITCH):
+    add(ref, "Device", "C", 760 + 8 * k, 150, "100nF", C0402, {"1": net, "2": "GND"})
 
 n.write(HERE.parent / "cm5.kicad_sch")
