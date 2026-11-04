@@ -338,9 +338,10 @@ def add_diff_pairs(board) -> list[str]:
         print(f"  {'OK' if spread <= limit else '!!'} {group} 對與對之間差 {spread:.1f} mm(上限 {limit:g})")
         if spread > limit:
             problems.append(f"{group}:對與對之間長度差 {spread:.1f} mm > {limit:g} mm")
-    for t in diff_pairs.EXTRA_TRACKS:
+    stitch_tracks, stitch_vias = diff_pairs.stitch_copper()
+    for t in (*diff_pairs.EXTRA_TRACKS, *stitch_tracks):
         track(*t)
-    for v in diff_pairs.EXTRA_VIAS:
+    for v in (*diff_pairs.EXTRA_VIAS, *stitch_vias):
         via(*v)
     pcbnew.ZONE_FILLER(board).Fill(board.Zones())  # 平面與電源級鋪銅要讓開新的過孔
 
