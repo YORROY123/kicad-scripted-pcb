@@ -23,3 +23,27 @@
 (rule "diff pair USB2 LAN0"
   (condition "(A.NetName == 'LAN0_DP' && B.NetName == 'LAN0_DM') || (A.NetName == 'LAN0_DM' && B.NetName == 'LAN0_DP')")
   (constraint clearance (min 0.14mm)))
+(rule "diff pair HDMI0 D2"
+  (condition "(A.NetName == 'HDMI0_D2_P' && B.NetName == 'HDMI0_D2_N') || (A.NetName == 'HDMI0_D2_N' && B.NetName == 'HDMI0_D2_P')")
+  (constraint clearance (min 0.19mm)))
+(rule "diff pair HDMI0 D2 width"
+  (condition "A.NetName == 'HDMI0_D2_P' || A.NetName == 'HDMI0_D2_N'")
+  (constraint track_width (min 0.145mm)))
+(rule "diff pair HDMI0 D1"
+  (condition "(A.NetName == 'HDMI0_D1_P' && B.NetName == 'HDMI0_D1_N') || (A.NetName == 'HDMI0_D1_N' && B.NetName == 'HDMI0_D1_P')")
+  (constraint clearance (min 0.19mm)))
+(rule "diff pair HDMI0 D1 width"
+  (condition "A.NetName == 'HDMI0_D1_P' || A.NetName == 'HDMI0_D1_N'")
+  (constraint track_width (min 0.145mm)))
+(rule "diff pair HDMI0 D0"
+  (condition "(A.NetName == 'HDMI0_D0_P' && B.NetName == 'HDMI0_D0_N') || (A.NetName == 'HDMI0_D0_N' && B.NetName == 'HDMI0_D0_P')")
+  (constraint clearance (min 0.19mm)))
+(rule "diff pair HDMI0 D0 width"
+  (condition "A.NetName == 'HDMI0_D0_P' || A.NetName == 'HDMI0_D0_N'")
+  (constraint track_width (min 0.145mm)))
+(rule "diff pair HDMI0 CK"
+  (condition "(A.NetName == 'HDMI0_CK_P' && B.NetName == 'HDMI0_CK_N') || (A.NetName == 'HDMI0_CK_N' && B.NetName == 'HDMI0_CK_P')")
+  (constraint clearance (min 0.19mm)))
+(rule "diff pair HDMI0 CK width"
+  (condition "A.NetName == 'HDMI0_CK_P' || A.NetName == 'HDMI0_CK_N'")
+  (constraint track_width (min 0.145mm)))

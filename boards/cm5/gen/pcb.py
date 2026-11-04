@@ -309,6 +309,7 @@ def add_diff_pairs(board) -> list[str]:
             board.Add(t)
 
     print(f"差分線(對內長度差上限 {diff_pairs.SKEW_MAX} mm):")
+    lengths = {}
     for pair in diff_pairs.PAIRS:
         name, pnet, nnet, cls, src, dst = pair[:6]
         start, end = ends(src, pnet, nnet), ends(dst, pnet, nnet)
@@ -322,8 +323,15 @@ def add_diff_pairs(board) -> list[str]:
         for v in vias:
             via(*v)
         skew = abs(length["P"] - length["N"])
+        lengths[name] = length["P"]
         print(f"  {'OK' if not probs else '!!'} {name:22} {cls} Ω  長 {length['P']:6.1f} mm  "
               f"差 {skew:.3f} mm  換層 {len(vias) // 4} 次")
+    for group, limit in diff_pairs.GROUP_SKEW.items():
+        got = [v for k, v in lengths.items() if k.startswith(group + " ")]
+        spread = max(got) - min(got)
+        print(f"  {'OK' if spread <= limit else '!!'} {group} 對與對之間差 {spread:.1f} mm(上限 {limit:g})")
+        if spread > limit:
+            problems.append(f"{group}:對與對之間長度差 {spread:.1f} mm > {limit:g} mm")
     for t in diff_pairs.EXTRA_TRACKS:
         track(*t)
     for v in diff_pairs.EXTRA_VIAS:
