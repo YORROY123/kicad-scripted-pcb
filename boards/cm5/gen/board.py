@@ -410,7 +410,11 @@ poe_port(1, 500, 420)
 #     NON_REM1(SDA)100k 下拉,NON_REM0(SUSP_IND)用內部下拉 → 全部埠可拔除。
 #   - 只用 DN1、DN2;DN3、DN4 的 DP/DM 各 10k 上拉 3.3V = 埠停用(3.3 節)。
 #   - VBUS_DET:永久連接 host 的自供電 hub 接 3.3V(3.3 節)→ +3V3;RESET_N 接 PG_3V3。
-#   - RBIAS 12k 1%;CRFILT / PLLFILT 各 100nF(上限 0.1µF);24MHz 晶振 C15643 + 1M 並聯 + 27pF ×2(7.1)。
+#   - RBIAS 12k 1%;CRFILT / PLLFILT 各 100nF(上限 0.1µF)。
+#   - 24MHz 晶振:YXC X252024MRB4SI(JLC C371128,2520,CL 18pF、±10 / ±20ppm、ESR 100Ω;7.1 只要求
+#     並聯諧振、±350ppm,沒有 ESR 上限)。原用 3225 的 X322524MSB4SI(C15643):Hub 北側被乙太網路車道
+#     與 Hub 上行夾住只剩 4 mm,3225 擺進去就蓋住 PLLFILT / RBIAS 腳。負載電容 C1 = 2·CL − CS(圖 7-2):
+#     原本 CL 20pF 配 27pF → CS ≈ 13pF,換 CL 18pF → 23pF,取 22pF。1M 並聯照原設計保留。
 #   - PRTPWRx(高 = 開)→ AP2171W EN(1A,JLC C110466);FLG(開汲極)→ OCS_Nx,10k 上拉。
 #     BC_EN strap 用內部下拉 = 不支援充電協議。每埠 VBUS 100µF + 100nF(USB 2.0 下游 ≥ 120µF/hub)。
 #   - 每個 USB 接頭一顆 USBLC6-2SC6(穿過式,VBUS 參考腳接該埠 VBUS)。
@@ -461,9 +465,9 @@ for k, (ref, a, b, val) in enumerate([
 for k, (ref, net, val, fp) in enumerate([
         ("C201", "+3V3", "4.7uF", C0603), ("C202", "+3V3", "100nF", C0402), ("C203", "+3V3", "100nF", C0402),
         ("C204", "+3V3", "100nF", C0402), ("C205", "+3V3", "100nF", C0402), ("C206", "HUB_CRFILT", "100nF", C0402),
-        ("C207", "HUB_PLLFILT", "100nF", C0402), ("C208", "HUB_XI", "27pF", C0402), ("C209", "HUB_XO", "27pF", C0402)]):
+        ("C207", "HUB_PLLFILT", "100nF", C0402), ("C208", "HUB_XI", "22pF", C0402), ("C209", "HUB_XO", "22pF", C0402)]):
     add(ref, "Device", "C", 520 + 8 * k, 257, val, fp, {"1": net, "2": "GND"})
-add("Y60", "Device", "Crystal_GND24", 625, 245, "24MHz", "Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm",
+add("Y60", "Device", "Crystal_GND24", 625, 245, "24MHz", "Crystal:Crystal_SMD_2520-4Pin_2.5x2.0mm",
     {"1": "HUB_XI", "3": "HUB_XO", "2": "GND", "4": "GND"})
 
 
