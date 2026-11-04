@@ -36247,7 +36247,7 @@
 			(at 734.06 323.84999999999997 0)
 			(effects (font (size 1.27 1.27)) (justify left))
 		)
-		(property "Value" "27pF"
+		(property "Value" "22pF"
 			(at 734.06 326.39 0)
 			(effects (font (size 1.27 1.27)) (justify left))
 		)
@@ -36280,7 +36280,7 @@
 			(at 744.2199999999999 323.84999999999997 0)
 			(effects (font (size 1.27 1.27)) (justify left))
 		)
-		(property "Value" "27pF"
+		(property "Value" "22pF"
 			(at 744.2199999999999 326.39 0)
 			(effects (font (size 1.27 1.27)) (justify left))
 		)
@@ -36317,7 +36317,7 @@
 			(at 796.29 311.15 0)
 			(effects (font (size 1.27 1.27)) (justify left))
 		)
-		(property "Footprint" "Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm"
+		(property "Footprint" "Crystal:Crystal_SMD_2520-4Pin_2.5x2.0mm"
 			(at 793.75 311.15 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
