@@ -2,8 +2,8 @@
 
     python lib/route_test.py        (用 KiCad 自带的 python;不需要先 build)
 
-cm5 的内层电源平面必须留下(以前全部 zone 都被删掉);其他三块板的结果不变:
-它们板上只有 gnd_pour 的铺铜和规则区,照旧全删。
+cm5 的内层电源平面与电源级外层铺铜(有名字)、锁定的过孔必须留下(以前全部 zone 都被删掉);
+其他三块板的结果不变:它们板上只有 gnd_pour 的铺铜和规则区,也没有锁定的走线,照旧全删。
 """
 from __future__ import annotations
 
@@ -57,9 +57,15 @@ def synthetic() -> None:
     track.SetStart(pcbnew.VECTOR2I(0, 0))
     track.SetEnd(pcbnew.VECTOR2I(mm(5), 0))
     board.Add(track)
+    for locked in (False, True):
+        via = pcbnew.PCB_VIA(board)
+        via.SetPosition(pcbnew.VECTOR2I(mm(2), mm(2)))
+        via.SetLocked(locked)
+        board.Add(via)
 
     clear_routing(board)
-    assert len(board.GetTracks()) == 0, "tracks left"
+    left = list(board.GetTracks())
+    assert len(left) == 1 and left[0].Type() == pcbnew.PCB_VIA_T and left[0].IsLocked(), "tracks left"
     got = zone_keys(board)
     want = [("F.Cu", "+5V", False, "+5V island"), ("In1.Cu", "GND", False, "GND plane"),
             ("In2.Cu", "+5V", False, "+5V plane")]
@@ -70,19 +76,21 @@ def synthetic() -> None:
     gnd_pour(board, pcbnew.B_Cu)
     clear_routing(board)
     assert zone_keys(board) == want, zone_keys(board)
-    print("ok    synthetic: planes and named zones kept; pours, keepouts and tracks removed")
+    print("ok    synthetic: planes, named zones and locked vias kept; pours, keepouts and tracks removed")
 
 
 def real_boards() -> None:
-    for name, kept in (("cm5", 3), ("relay8", 0), ("esp32c3", 0), ("usbc-ldo", 0)):
+    for name, kept in (("cm5", 16), ("relay8", 0), ("esp32c3", 0), ("usbc-ldo", 0)):
         pcb = BOARDS / name / f"{name}.kicad_pcb"
         board = pcbnew.LoadBoard(str(pcb))
         before = len(list(board.Zones()))
+        locked = sum(t.IsLocked() for t in board.GetTracks())
         clear_routing(board)
+        assert len(board.GetTracks()) == locked, (name, "unlocked tracks left")
         after = zone_keys(board)
         assert len(after) == kept, (name, after)
         assert all(z.GetZoneName() for z in board.Zones()), (name, after)
-        print(f"ok    {name}: {before} zones -> kept {len(after)}")
+        print(f"ok    {name}: {before} zones -> kept {len(after)}; {locked} locked vias kept")
 
 
 if __name__ == "__main__":
