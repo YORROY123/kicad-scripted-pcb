@@ -282,8 +282,10 @@ def add_diff_pairs(board) -> list[str]:
         return (p.GetPosition().x / 1e6 - pcbgen.ORIGIN[0], p.GetPosition().y / 1e6 - pcbgen.ORIGIN[1])
 
     def ends(refs, pnet, nnet):
-        pads = {p.GetNetname(): at_mm(p) for r in refs for p in board.FindFootprintByReference(r).Pads()
-                if p.GetNetname() in (pnet, nnet)}
+        """refs 裡可寫 "J50.B6":只用那支腳(USB-C 每條資料線有兩支腳)。"""
+        pads = {p.GetNetname(): at_mm(p) for r in refs
+                for p in board.FindFootprintByReference(r.split(".")[0]).Pads()
+                if p.GetNetname() in (pnet, nnet) and ("." not in r or p.GetNumber() == r.split(".")[1])}
         return {"P": pads.get(pnet), "N": pads.get(nnet)}
 
     def pads_of(ref, net):
@@ -346,7 +348,7 @@ def add_diff_pairs(board) -> list[str]:
     conn = board.GetConnectivity()
     pad_name = lambda p: f"{p.GetParentFootprint().GetReference()}.{p.GetNumber()}"  # noqa: E731
     for net in [n for pair in diff_pairs.PAIRS for n in pair[1:3]]:
-        pads = [p for p in board.GetPads() if p.GetNetname() == net]
+        pads = [p for p in board.GetPads() if p.GetNetname() == net and pad_name(p) not in diff_pairs.LOOSE]
         reached = {pad_name(x) for x in conn.GetConnectedItems(pads[0]) if x.GetClass() == "PAD"} if pads else set()
         loose = [pad_name(p) for p in pads if pad_name(p) not in reached]
         if not pads or loose:
