@@ -38,6 +38,18 @@
 (rule "diff pair USB2 CM5"
   (condition "(A.NetName == 'CM5_USB_P' && B.NetName == 'CM5_USB_N') || (A.NetName == 'CM5_USB_N' && B.NetName == 'CM5_USB_P')")
   (constraint clearance (min 0.14mm)))
+(rule "diff pair USB2 Hub 上行"
+  (condition "(A.NetName == 'HUB_UP_DP' && B.NetName == 'HUB_UP_DN') || (A.NetName == 'HUB_UP_DN' && B.NetName == 'HUB_UP_DP')")
+  (constraint clearance (min 0.14mm)))
+(rule "diff pair USB2 USB-C"
+  (condition "(A.NetName == 'USBC_DP' && B.NetName == 'USBC_DN') || (A.NetName == 'USBC_DN' && B.NetName == 'USBC_DP')")
+  (constraint clearance (min 0.14mm)))
+(rule "diff pair USB2 USB-A 0"
+  (condition "(A.NetName == 'USBA0_DP' && B.NetName == 'USBA0_DN') || (A.NetName == 'USBA0_DN' && B.NetName == 'USBA0_DP')")
+  (constraint clearance (min 0.14mm)))
+(rule "diff pair USB2 USB-A 1"
+  (condition "(A.NetName == 'USBA1_DP' && B.NetName == 'USBA1_DN') || (A.NetName == 'USBA1_DN' && B.NetName == 'USBA1_DP')")
+  (constraint clearance (min 0.14mm)))
 (rule "diff pair 乙太網路 0"
   (condition "(A.NetName == 'ETH0_P' && B.NetName == 'ETH0_N') || (A.NetName == 'ETH0_N' && B.NetName == 'ETH0_P')")
   (constraint clearance (min 0.19mm)))

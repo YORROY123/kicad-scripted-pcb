@@ -109,7 +109,45 @@ PAIRS = (
         ("via", (103.3, 33.9)),
         ("B.Cu", [(103.3, 34.6), (103.3, 53.9)]),
         ("via", (103.3, 54.6)),
-        ("F.Cu", [(103.3, 55.3), (103.3, 56.4), (126.0, 56.4), (126.0, 75.75), (107.3, 75.75)]),
+        ("F.Cu", [(103.3, 55.3), (103.3, 56.4), (126.0, 56.4), (126.0, 75.75), (109.3, 75.75)]),
+    ]),
+    # U60(USB 切換)周圍三對的繞行順序和三個去向(CM5 東北、USB-C 東南、Hub 西)相反,一定有一對要換層。
+    # Hub 上行那對在 U60 西邊打過孔到 B.Cu 後往回(東)走再往北:從 USB-C 那對底下穿過,
+    # 往回走那一下 P/N 也左右翻過來,剛好修掉它兩端手性相反(USB2514B 的 PRT_SWAP 要 SMBus 設定)。
+    ("USB2 Hub 上行", "HUB_UP_DP", "HUB_UP_DN", "90", ("U60",), ("U61",), [
+        ("F.Cu", [(103.0, 76.25), (102.3, 76.25)]),
+        ("via", (101.6, 76.25)),
+        # B.Cu 往北到 y 72.3(不跨 L3 的 +5V / +3V3 分界 71.75)、往西到 Hub 正上方再往南;
+        # 三個左轉都是 D+ 在外圈,三段直線留給補長凸起
+        ("B.Cu", [(102.3, 76.25), (102.6, 76.25), (102.6, 72.3), (95.75, 72.3), (95.75, 72.9)]),
+        ("via", (95.75, 73.6)),   # 離 Hub 北側腳遠一點:XI / PLLFILT(33、34 腳)的電容擺得進來
+        ("F.Cu", [(95.75, 74.3), (95.75, 76.5)]),
+    ]),
+    # USB-C 燒錄口:往北讓開 Hub 上行的過孔,在 U60 南邊往東,經 D70 接 J50 的 B6/B7
+    # (A6/A7 在 B6/B7 中間,兩端手性要用 B 那組;A、B 兩組的連接交給 freerouting)
+    ("USB2 USB-C", "USBC_DP", "USBC_DN", "90", ("U60",), ("J50.B6", "J50.B7"), [
+        ("F.Cu", [(103.0, 75.25), (102.8, 75.25), (102.2, 74.65), (100.6, 74.65), (100.6, 80.3),
+                  (121.0, 80.3), (121.0, 105.2)]),
+        ("thru", "D70"),
+    ]),
+    # Hub 下行兩對從 U61 西側出來往南(乙太網路東邊),經 USBLC6(D71 / D72)進 USB-A。兩對兩端手性都相反,
+    # USB-A 的資料腳是貼片(只在 F.Cu),不能在接頭前換邊:和 Hub 上行一樣折返一次(兩條各一個過孔、長度不變)。
+    # USB-A 0 在 U61 西邊折返往南;USB-A 1 在往東那段的盡頭折返往南。
+    ("USB2 USB-A 0", "USBA0_DP", "USBA0_DN", "90", ("U61",), ("J51",), [
+        ("F.Cu", [(91.4, 78.25), (88.6, 78.25)]),
+        ("via", (87.9, 78.25)),
+        ("B.Cu", [(88.6, 78.25), (88.9, 78.25), (88.9, 88.5)]),
+        ("via", (88.9, 89.2)),
+        ("F.Cu", [(88.9, 89.9), (88.9, 90.0), (88.0, 90.9), (88.0, 91.0)]),
+        ("thru", "D71"),
+    ]),
+    ("USB2 USB-A 1", "USBA1_DP", "USBA1_DN", "90", ("U61",), ("J52",), [
+        ("F.Cu", [(91.4, 79.25), (89.3, 79.25), (89.3, 86.0), (105.6, 86.0)]),
+        ("via", (106.3, 86.0)),
+        ("B.Cu", [(105.6, 86.0), (105.0, 86.0), (105.0, 88.6)]),
+        ("via", (105.0, 89.3)),
+        ("F.Cu", [(105.0, 90.0), (105.0, 91.0)]),
+        ("thru", "D72"),
     ]),
     # CM5 乙太網路(J1 → U30/U31 → J30)。J1 頂排(ETH1、ETH0)往北出、繞過 J1 西端,底排(ETH3、ETH2)
     # 往南出包在裡面,四對在 J1 南邊往西,x ≈ 83–87 往南(H8 南邊、U61 西邊),y ≈ 83–89 往西時在
@@ -157,6 +195,11 @@ PAIRS = (
 FAN = {"HDMI0 D2", "HDMI0 D1", "HDMI0 D0", "HDMI0 CK",
        "乙太網路 0", "乙太網路 1", "乙太網路 2", "乙太網路 3"}
 
+# 差分網上刻意不接、留給 freerouting 的焊盤(USB-C 另一面那組資料腳)
+LOOSE = {"J50.A6", "J50.A7"}
+# 補長凸起的高度與兩端留白另外指定(B.Cu 段旁邊沒有別的線)
+BUMP = {"USB2 Hub 上行": (0.6, 0.5)}
+
 # 差分線旁邊的其他手佈件:(網, 層, 線寬, [點…]) 與過孔 (網, x, y)
 EXTRA_TRACKS = (
     # U40 的 30 腳(LAN0_1V2)夾在 RX、TX 兩對之間,25 腳在 D 對南邊:各拉一小段打過孔,
@@ -173,6 +216,13 @@ EXTRA_TRACKS = (
     *(("GND", "F.Cu", 0.25, [(x, 109.8), (x, 110.7)]) for x in (73.0, 71.5, 70.0, 68.5)),
     # U30/U31 的地腳(3、8)夾在兩對中間:連起來,往北拉到兩對間距 2 mm 處打地過孔
     *(("GND", "F.Cu", 0.2, [(x, 90.0), (x, 93.385)]) for x in (47.2, 54.8)),
+    # USBLC6 的 GND(2 腳)、VBUS(5 腳)夾在兩條線中間:往兩條線分開處拉出來打過孔
+    # (D71 / D72 轉 90°:VBUS 在北、GND 在南;D70 轉 270°:GND 在北、VBUS 在南)
+    *(("GND", "F.Cu", 0.25, [(x, y0), (x, y1)]) for x, y0, y1 in ((88.0, 95.64, 96.95), (105.0, 95.64, 96.95),
+                                                                  (121.0, 106.1, 107.26))),
+    *((net, "F.Cu", 0.25, [(x, y0), (x, y1)]) for net, x, y0, y1 in (
+        ("USBA0_VBUS", 88.0, 92.1, 93.36), ("USBA1_VBUS", 105.0, 92.1, 93.36),
+        ("USBC_VBUS", 121.0, 109.54, 110.6))),
 )
 EXTRA_VIAS = (
     ("LAN0_1V2", 51.1, 62.25), ("LAN0_1V2", 50.4, 65.6),
@@ -181,6 +231,8 @@ EXTRA_VIAS = (
     ("GND", 4.3, 11.75), ("GND", 4.3, 13.25), ("GND", 4.45, 14.75),
     *(("GND", x, 110.7) for x in (73.0, 71.5, 70.0, 68.5)),
     *(("GND", x, 90.0) for x in (47.2, 54.8)),
+    ("GND", 88.0, 96.95), ("GND", 105.0, 96.95), ("GND", 121.0, 106.1),
+    ("USBA0_VBUS", 88.0, 92.1), ("USBA1_VBUS", 105.0, 92.1), ("USBC_VBUS", 121.0, 110.6),
 )
 
 
@@ -259,7 +311,7 @@ def route(pair, start: dict, end: dict, pads=None):
     term = start
     after_thru = False
     for k, item in enumerate(path):
-        if item[0] in ("via", "twist", "thru"):
+        if item[0] in ("via", "twist", "thru", "tail"):
             continue
         layer, pts = item
         pts = chamfer(pts)
@@ -318,11 +370,32 @@ def route(pair, start: dict, end: dict, pads=None):
             length[key] += _length(line)
         term = nxt
         after_thru = False
+    if path[-1][0] == "thru":       # 最後穿過直通式零件:從另一側的焊盤直接接終點
+        if not _closer(end["P"], end["N"], term["P"], term["N"]):
+            problems.append(f"{name}:終點的 P/N 在行進方向的另一側(兩端手性相反,要扭轉)")
+        for key, net in (("P", pnet), ("N", nnet)):
+            tracks.append((net, "F.Cu", w, [term[key], end[key]]))
+            length[key] += math.dist(term[key], end[key])
+    elif path[-1][0] == "tail":     # 兩條各自指定的尾段(要在接頭前換邊時)
+        for key, net in (("P", pnet), ("N", nnet)):
+            cur, layer = term[key], "F.Cu"
+            for it in path[-1][1][key]:
+                if it[0] == "via":
+                    vias.append((net, *it[1]))
+                    via_len[key] += VIA_LEN
+                    continue
+                layer, line = it[0], [cur] + list(it[1])
+                tracks.append((net, layer, w, line))
+                length[key] += _length(line)
+                cur = line[-1]
+            if math.dist(cur, end[key]) > 1e-6:
+                tracks.append((net, layer, w, [cur, end[key]]))
+                length[key] += math.dist(cur, end[key])
     length = {k: length[k] + via_len[k] for k in length}
     skew = abs(length["P"] - length["N"])
     if skew > SKEW_MAX:
         short = pnet if length["P"] < length["N"] else nnet
-        if _compensate(tracks, short, pnet if short == nnet else nnet, skew):
+        if _compensate(tracks, short, pnet if short == nnet else nnet, skew, *BUMP.get(name, (BUMP_MAX, 1.0))):
             length = {k: sum(_length(t[3]) for t in tracks if t[0] == net) + via_len[k]
                       for k, net in (("P", pnet), ("N", nnet))}
             skew = abs(length["P"] - length["N"])
@@ -365,13 +438,13 @@ def _dist_to_line(p, line) -> float:
     return best
 
 
-def _compensate(tracks, short: str, other: str, skew: float) -> bool:
+def _compensate(tracks, short: str, other: str, skew: float, bump: float = 0.25, margin: float = 1.0) -> bool:
     """在較短那條線的水平 / 垂直段上加 45° 梯形凸起(朝遠離另一條的方向)補長度。
 
     每個凸起多出 2a(√2 − 1)(a 為高度,≤ BUMP_MAX)。從最長那段開始放,一段放不下就接著放次長的,
     最後一批的 a 算到剛好補齊。回傳有沒有加。"""
     per = 2 * (math.sqrt(2) - 1)
-    pitch = 2 * BUMP_MAX + BUMP_TOP + BUMP_GAP
+    pitch = 2 * bump + BUMP_TOP + BUMP_GAP
     rem, done = skew, False
     while rem > 1e-6:
         best = None
@@ -382,14 +455,14 @@ def _compensate(tracks, short: str, other: str, skew: float) -> bool:
             for si, (p, q) in enumerate(zip(line, line[1:])):
                 L = math.dist(p, q)
                 axis = abs(p[0] - q[0]) < 1e-9 or abs(p[1] - q[1]) < 1e-9
-                if axis and L >= pitch - BUMP_GAP + 2 and partner and (best is None or L > best[0]):
+                if axis and L >= pitch - BUMP_GAP + 2 * margin and partner and (best is None or L > best[0]):
                     best = (L, ti, si, partner)
         if best is None:
             return done
         L, ti, si, partner = best
-        n_need = math.ceil(rem / (per * BUMP_MAX))
-        n = min(n_need, int((L - 2 + BUMP_GAP) // pitch))  # 兩端各留 1 mm
-        a = rem / (n * per) if n == n_need else BUMP_MAX
+        n_need = math.ceil(rem / (per * bump))
+        n = min(n_need, int((L - 2 * margin + BUMP_GAP) // pitch))  # 兩端各留 margin
+        a = rem / (n * per) if n == n_need else bump
         net, layer, w, line = tracks[ti]
         p, q = line[si], line[si + 1]
         d = _unit(p, q)
@@ -441,6 +514,14 @@ def keepouts() -> list:
             elif item[0] == "F.Cu":
                 for (xa, ya), (xb, yb) in zip(item[1], item[1][1:]):
                     out.append((min(xa, xb) - r, min(ya, yb) - r, max(xa, xb) + r, max(ya, yb) + r))
+            elif item[0] == "tail":
+                for its in item[1].values():
+                    for it in its:
+                        if it[0] == "via":
+                            vias.append(it[1])
+                        elif it[0] == "F.Cu":
+                            for (xa, ya), (xb, yb) in zip(it[1], it[1][1:]):
+                                out.append((min(xa, xb) - r, min(ya, yb) - r, max(xa, xb) + r, max(ya, yb) + r))
             elif item[0] == "twist":
                 a, b = path[k - 1][1][-1], path[k + 1][1][0]
                 rt = TWIST_VIA + 0.3 + KEEP
