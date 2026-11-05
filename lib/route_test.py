@@ -1,8 +1,8 @@
-"""lib/route.py 的 clear_routing:重新导入 .ses 前清掉什么、留下什么。
+"""lib/route.py 的 clear_routing:重新导入 .ses 前清掉什么、留下什么;plane_layers_off:DSN 的平面层。
 
     python lib/route_test.py        (用 KiCad 自带的 python;不需要先 build)
 
-cm5 的内层电源平面与电源级外层铺铜(有名字)、锁定的过孔必须留下(以前全部 zone 都被删掉);
+cm5 的内层电源平面与电源级与供电支线的外层铺铜(有名字)、锁定的过孔必须留下(以前全部 zone 都被删掉);
 其他三块板的结果不变:它们板上只有 gnd_pour 的铺铜和规则区,也没有锁定的走线,照旧全删。
 """
 from __future__ import annotations
@@ -14,7 +14,7 @@ import pcbnew
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from pcbgen import mm  # noqa: E402
-from route import clear_routing, gnd_pour  # noqa: E402
+from route import clear_routing, gnd_pour, plane_layers_off  # noqa: E402
 
 BOARDS = Path(__file__).resolve().parent.parent / "boards"
 
@@ -80,7 +80,7 @@ def synthetic() -> None:
 
 
 def real_boards() -> None:
-    for name, kept in (("cm5", 16), ("relay8", 0), ("esp32c3", 0), ("usbc-ldo", 0)):
+    for name, kept in (("cm5", 24), ("relay8", 0), ("esp32c3", 0), ("usbc-ldo", 0)):
         pcb = BOARDS / name / f"{name}.kicad_pcb"
         board = pcbnew.LoadBoard(str(pcb))
         before = len(list(board.Zones()))
@@ -93,6 +93,47 @@ def real_boards() -> None:
         print(f"ok    {name}: {before} zones -> kept {len(after)}; {locked} locked tracks and vias kept")
 
 
+DSN = """  (structure
+    (layer F.Cu
+      (type signal)
+    )
+    (layer In1.Cu
+      (type power)
+    )
+    (layer B.Cu
+      (type signal)
+    )
+  (network
+    (class kicad_default A B
+      (circuit
+        (use_via "Via[0-3]_600:300_um")
+      )
+    )
+    (class Power GND
+      (circuit
+        (use_via "Via[0-3]_600:300_um")
+      )
+    )
+"""
+
+
+def plane_layers():
+    out = plane_layers_off(DSN, ["In1.Cu"], ["F.Cu", "B.Cu"])
+    assert "(type power)" not in out and out.count("(type signal)") == 3, out
+    assert out.count("(use_layer F.Cu B.Cu)") == 2 == out.count("(circuit"), out
+    assert out.index("(use_layer") < out.index("(use_via"), out
+    # 层名对不上、或没有类别:要报错,不能默默汇出一个 freerouting 会在平面层走线的 DSN
+    for bad, layers in ((DSN.replace("(type power)", "(type signal)"), ["In1.Cu"]), (DSN, ["In2.Cu"]),
+                        (DSN.replace("(circuit", "(rule"), ["In1.Cu"])):
+        try:
+            plane_layers_off(bad, layers, ["F.Cu", "B.Cu"])
+        except SystemExit:
+            continue
+        raise AssertionError("plane_layers_off 应该失败")
+    print("ok    plane_layers_off: power -> signal, use_layer on every class; bad input refused")
+
+
 if __name__ == "__main__":
+    plane_layers()
     synthetic()
     real_boards()

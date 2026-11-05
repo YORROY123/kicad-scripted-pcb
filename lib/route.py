@@ -12,6 +12,7 @@ freerouting 2.5.0 的原生 CLI 在 KiCad 10 的 DSN 上会崩(上游 #957),
         -de usbc-ldo.dsn -do usbc-ldo.ses --router.autorouter.max_passes=30 \
         --gui.enabled=false
 """
+import re
 import sys
 from pathlib import Path
 
@@ -27,7 +28,31 @@ def export_dsn(pcb: Path, dsn: Path) -> None:
     board.Save(str(pcb))
     if not pcbnew.ExportSpecctraDSN(board, str(dsn)):
         raise SystemExit("ExportSpecctraDSN 失败")
+    planes = [board.GetLayerName(lid) for lid in board.GetEnabledLayers().CuStack()
+              if board.GetLayerType(lid) == pcbnew.LT_POWER]
+    if planes:
+        signal = [board.GetLayerName(lid) for lid in board.GetEnabledLayers().CuStack()
+                  if board.GetLayerType(lid) != pcbnew.LT_POWER]
+        dsn.write_text(plane_layers_off(dsn.read_text(encoding="utf-8"), planes, signal), encoding="utf-8")
+        print(f"  {', '.join(planes)}:只接平面、不走线(use_layer {' '.join(signal)})")
     print(f"wrote {dsn.name}")
+
+
+def plane_layers_off(text: str, planes: list, signal: list) -> str:
+    """电源平面层(KiCad 层类型 power)在 DSN 里改回 signal、每个网络类别加 use_layer 只用其他层。
+
+    freerouting 2.5.0 只在 signal 层上把平面网络(GND、+3V3…)的焊盘用过孔接到平面;层标成 power 时
+    完全不接(cm5 实测:未接 229 条,其中 100 条是平面网络)。它也没有只挡走线、不挡过孔的
+    wire_keepout(keepout 连过孔一起挡,平面就接不上)。所以层照样给 signal,改用每个类别的
+    (circuit (use_layer …)) 限制走线层:过孔照样穿过平面层,走线只在其他层。"""
+    for name in planes:
+        text, n = re.subn(rf"(\(layer {re.escape(name)}\s+)\(type power\)", r"\1(type signal)", text)
+        if n != 1:
+            raise SystemExit(f"DSN 里找不到 {name} 的 (type power)")
+    text, n = re.subn(r"\(circuit(\s+)", lambda m: f"(circuit{m.group(1)}(use_layer {' '.join(signal)}){m.group(1)}", text)
+    if n == 0:
+        raise SystemExit("DSN 里没有网络类别的 (circuit …)")
+    return text
 
 
 def gnd_pour(board, layer) -> None:

@@ -17,6 +17,8 @@ sys.path.insert(0, str(HERE.parents[2] / "lib"))
 import pcbgen  # noqa: E402
 import pcbnew  # noqa: E402
 import diff_pairs  # noqa: E402
+import fanout  # noqa: E402
+import feeds  # noqa: E402
 import power_stage  # noqa: E402
 from pcbgen import BoardSpec, build  # noqa: E402
 from placement import BOARD_HOLES, H, MODULE_HOLES, W, auto_place, sch_positions  # noqa: E402
@@ -37,11 +39,19 @@ NETCLASSES = (
     ("PoE", 0.5, 0.25, "POE*"),
     # 開關節點:鋪銅(gen/power_stage.py);這裡的線寬只給 U10 SW 腳、R13 這些小分支
     ("Switch", 0.8, 0.25, "SW", "SW3"),
-    # +5V 外層:平面 → U20 與 USB/HDMI 開關;+3V3 外層:平面 → M.2
-    ("Rail5", 2.7, 0.2, "+5V"),
-    ("Rail3", 1.1, 0.2, "+3V3"),
+    # +5V / +3V3 的大電流路徑(USB/HDMI 開關、CM5、M.2)是 gen/feeds.py 的鋪銅與過孔;這裡的線寬只給
+    # 其他接點(電容、QFN 腳)到平面的過孔。+3V3 接 LAN7800 / USB2514B 的 0.25 mm、0.5 mm 腳距 QFN 腳,
+    # 線寬超過 0.25 就碰到隔壁腳;+5V 最遠的是風扇 J81(0.5 A,IPC-2221 外層 0.17 mm)。
+    ("Rail5", 0.4, 0.2, "+5V"),
+    ("Rail3", 0.25, 0.2, "+3V3"),
     ("USB5V", 0.75, 0.2, "USBA0_VBUS", "USBA1_VBUS", "HDMI_5V", "USBC_VBUS"),
 )
+# Default 類別(一般訊號)。0.25/0.2 鑽不出 QFN 0.5 mm(LAN7800、IP804AR、USB2514B)與 CM5
+# 連接器 0.4 mm:freerouting 扇出只拉出 58.6% 的 SMD 腳、40 輪剩 127 條以上。
+# 0.15/0.15 仍高於 JLCPCB 4 層板最小線寬/線距 0.09 mm。
+DEFAULT_CLASS = (0.15, 0.15)
+# Power 類別(GND 與小電源)。0.25:同上,QFN 腳;這些網最大是 CM5_3V3 的 0.6 A(IPC-2221 外層 0.17 mm)
+POWER_W = 0.25
 POWER = ("GND", "CM5_3V3", "IP_3V3", "LAN0_1V2", "LAN1_1V2", "LAN0_2V5", "LAN1_2V5")
 
 # ── 外層電源走線的電流(IPC-2221 §6.2 外層,1 oz,溫升 10 °C)─────────────────
@@ -54,9 +64,7 @@ CURRENTS = (
     ("POE0_N", 0.92, "同上,回流"),
     ("POE1_P", 0.92, "同上"),
     ("POE1_N", 0.92, "同上,回流"),
-    ("+5V", 4.85, "外層:平面 → U62/U63(AP2171W 限流上限 1.9 A ×2,Diodes DS31564 Rev 9-2)"
-                  "+ U70(TPS2051C 0.5 A 檔 IOS 上限 1.05 A,TI SLVSAU6I §6.7,−40–125 °C);平面 → U20 約 2.9 A 較小"),
-    ("+3V3", 2.5, "外層:平面 → M.2 J60(M.2 規範 3.3 V 上限)"),
+    # +5V(→ U62/U63/U70、CM5)與 +3V3(→ M.2)的外層大電流路徑由 gen/feeds.py 的鋪銅檢查
     ("USBA0_VBUS", 1.9, "AP2171W 限流上限"),
     ("USBA1_VBUS", 1.9, "AP2171W 限流上限"),
     ("HDMI_5V", 1.05, "TPS2051C 限流上限"),
@@ -93,6 +101,13 @@ def spec(place: dict) -> BoardSpec:
         fab_ref_libs=("Resistor_SMD", "Capacitor_SMD"),
         mounting_holes=tuple(holes),
         copper_layers=4,
+        default_class=DEFAULT_CLASS,
+        power_width=POWER_W,
+        # freerouting 2.5.0 扇出時無視「關閉收窄」(上游 #973,修正已合併、未發版),會收到 0.1124 mm;
+        # JLCPCB 4 層板最小線寬 0.09 mm,0.1 仍做得到
+        track_min=0.1,
+        # In1 整片 GND(差分線參考面)、In2 電源平面:不能讓 freerouting 在上面走線
+        plane_layers=("In1.Cu", "In2.Cu"),
     )
 
 
@@ -154,7 +169,7 @@ def class_width(net: str) -> float:
     for _, width, _, *patterns in NETCLASSES:
         if any(fnmatch.fnmatchcase(net, p) for p in patterns):
             return width
-    return pcbgen.POWER_W if net in POWER else pcbgen.TRACK_W
+    return POWER_W if net in POWER else DEFAULT_CLASS[0]
 
 
 def power_width_problems(nets) -> list[str]:
@@ -173,12 +188,12 @@ def power_width_problems(nets) -> list[str]:
     return problems
 
 
-def add_power_stage(board) -> list[str]:
-    """電源級的外層鋪銅與鎖定過孔(gen/power_stage.py),填充後檢查;回傳問題清單(空 = 通過)。"""
+def make_pours(board, pours) -> dict:
+    """(名字, 網, 多邊形[, 層]) → 有名字的鋪銅(預設 F.Cu)。"""
     zones = {}
-    for name, net, pts in power_stage.POURS:
+    for name, net, pts, *layer in pours:
         z = pcbnew.ZONE(board)
-        z.SetLayer(pcbnew.F_Cu)
+        z.SetLayer(board.GetLayerID(layer[0]) if layer else pcbnew.F_Cu)
         z.SetNet(board.FindNet(net))
         z.SetZoneName(name)
         z.SetAssignedPriority(1)  # 蓋過 lib/route.py 之後鋪的整面 GND(優先序 0)
@@ -191,8 +206,13 @@ def add_power_stage(board) -> list[str]:
             o.Append(pcbgen.at(x, y))
         board.Add(z)
         zones[name] = z
+    return zones
+
+
+def make_vias(board, zones, fields) -> dict:
+    """(銅區名字, [(x, y)…]) → 鎖定的過孔,網跟銅區。"""
     vias = {}
-    for name, pts in power_stage.VIA_FIELDS:
+    for name, pts in fields:
         net = board.FindNet(zones[name].GetNetname())
         for x, y in pts:
             v = pcbnew.PCB_VIA(board)
@@ -203,6 +223,61 @@ def add_power_stage(board) -> list[str]:
             v.SetLocked(True)  # lib/route.py 重新匯入佈線時保留
             board.Add(v)
             vias.setdefault(name, []).append(v)
+    return vias
+
+
+def _fill(z):
+    return z.GetFilledPolysList(z.GetLayer())
+
+
+def check_pours(zones, vias, corridors, via_links, also=()) -> list[str]:
+    """填充後:鋪銅不空、過孔在銅上(also:另一層的鋪銅也要)、載流截面、過孔數。印報告,回傳問題。"""
+    problems = []
+    for name, z in zones.items():
+        if _fill(z).Area() == 0:
+            problems.append(f"鋪銅「{name}」填充後是空的")
+    for name, vs in vias.items():
+        targets = [name] + [b for a, b in also if a == name]
+        for t in targets:
+            off = [v for v in vs if not _fill(zones[t]).Contains(v.GetPosition())]
+            if off:
+                problems.append(f"「{name}」有 {len(off)} 個過孔不在「{t}」的銅上")
+
+    print(f"  載流截面(IPC-2221 外層;短頸 ≤ {power_stage.SHORT_NECK_MM:g} mm 改算 I²R):")
+    for name, amps, (x0, y0, x1, y1), flow, what in corridors:
+        rect = pcbnew.SHAPE_POLY_SET()
+        rect.NewOutline()
+        for x, y in ((x0, y0), (x1, y0), (x1, y1), (x0, y1)):
+            rect.Append(pcbgen.at(x, y))
+        rect.BooleanSubtract(_fill(zones[name]))
+        outside = rect.Area() / 1e12  # nm² → mm²
+        width, length = ((x1 - x0), (y1 - y0)) if flow == "y" else ((y1 - y0), (x1 - x0))
+        need = ipc2221_outer_width(amps)
+        loss = amps ** 2 * CU_RESISTIVITY * length / (width * OUTER_CU_MM)
+        neck_ok = length <= power_stage.SHORT_NECK_MM and loss <= power_stage.NECK_LOSS_MAX_W
+        ok = outside < 1e-3 and (width >= need or neck_ok)
+        note = "" if width >= need else f";短頸 {length:.2f} mm,I²R {loss * 1000:.0f} mW"
+        print(f"  {'OK' if ok else '!!'} {name:12} {amps:5.1f} A  寬 {width:4.2f} mm(IPC-2221 {need:4.2f}){note}  {what}")
+        if outside >= 1e-3:
+            problems.append(f"「{name}」截面「{what}」有 {outside:.2f} mm² 沒鋪到銅")
+        elif not ok:
+            problems.append(f"「{name}」截面「{what}」寬 {width:.2f} mm < IPC-2221 {need:.2f} mm,"
+                            f"且不是短頸(長 {length:.2f} mm、I²R {loss:.2f} W)")
+
+    per_via = via_amps()
+    print(f"  過孔(鑽 {pcbgen.VIA_DRILL} mm、孔銅 {VIA_PLATING_MM * 1000:g} µm):每個 {per_via:.2f} A")
+    for name, amps, why in via_links:
+        need, have = math.ceil(amps / per_via), len(vias.get(name, []))
+        print(f"  {'OK' if have >= need else '!!'} {name:12} {amps:4.1f} A  {have} 個(至少 {need})  {why}")
+        if have < need:
+            problems.append(f"「{name}」過孔 {have} 個 < {need}({amps} A)")
+    return problems
+
+
+def add_power_stage(board) -> list[str]:
+    """電源級的外層鋪銅與鎖定過孔(gen/power_stage.py),填充後檢查;回傳問題清單(空 = 通過)。"""
+    zones = make_pours(board, power_stage.POURS)
+    vias = make_vias(board, zones, power_stage.VIA_FIELDS)
     for net, layer, w, pts in power_stage.TRACKS:
         for a, b in zip(pts, pts[1:]):
             t = pcbnew.PCB_TRACK(board)
@@ -226,7 +301,6 @@ def add_power_stage(board) -> list[str]:
     problems = []
     board.BuildConnectivity()
     conn = board.GetConnectivity()
-    pad_name = lambda p: f"{p.GetParentFootprint().GetReference()}.{p.GetNumber()}"  # noqa: E731
     for net in power_stage.ROUTED_NETS:
         pads = [p for p in board.GetPads() if p.GetNetname() == net]
         # GetConnectedItems 回傳整個連通群(含自己);SWIG 每次給新的包裝物件,用名字比
@@ -234,43 +308,51 @@ def add_power_stage(board) -> list[str]:
         loose = [pad_name(p) for p in pads if pad_name(p) not in reached]
         if not pads or loose:
             problems.append(f"手佈的網 {net} 沒接通:{', '.join(loose) or '沒有焊盤'}")
-    for name, z in zones.items():
-        if z.GetFilledPolysList(pcbnew.F_Cu).Area() == 0:
-            problems.append(f"鋪銅「{name}」填充後是空的")
-    for name, vs in vias.items():
-        fill = zones[name].GetFilledPolysList(pcbnew.F_Cu)
-        off = [v for v in vs if not fill.Contains(v.GetPosition())]
-        if off:
-            problems.append(f"「{name}」有 {len(off)} 個過孔不在銅上")
+    print("電源級鋪銅(F.Cu):")
+    problems += check_pours(zones, vias, power_stage.CORRIDORS, power_stage.VIA_LINKS)
+    return problems
 
-    print(f"電源級鋪銅(F.Cu,IPC-2221 外層;短頸 ≤ {power_stage.SHORT_NECK_MM:g} mm 改算 I²R):")
-    for name, amps, (x0, y0, x1, y1), flow, what in power_stage.CORRIDORS:
-        rect = pcbnew.SHAPE_POLY_SET()
-        rect.NewOutline()
-        for x, y in ((x0, y0), (x1, y0), (x1, y1), (x0, y1)):
-            rect.Append(pcbgen.at(x, y))
-        rect.BooleanSubtract(zones[name].GetFilledPolysList(pcbnew.F_Cu))
-        outside = rect.Area() / 1e12  # nm² → mm²
-        width, length = ((x1 - x0), (y1 - y0)) if flow == "y" else ((y1 - y0), (x1 - x0))
-        need = ipc2221_outer_width(amps)
-        loss = amps ** 2 * CU_RESISTIVITY * length / (width * OUTER_CU_MM)
-        neck_ok = length <= power_stage.SHORT_NECK_MM and loss <= power_stage.NECK_LOSS_MAX_W
-        ok = outside < 1e-3 and (width >= need or neck_ok)
-        note = "" if width >= need else f";短頸 {length:.2f} mm,I²R {loss * 1000:.0f} mW"
-        print(f"  {'OK' if ok else '!!'} {name:12} {amps:5.1f} A  寬 {width:4.2f} mm(IPC-2221 {need:4.2f}){note}  {what}")
-        if outside >= 1e-3:
-            problems.append(f"「{name}」截面「{what}」有 {outside:.2f} mm² 沒鋪到銅")
-        elif not ok:
-            problems.append(f"「{name}」截面「{what}」寬 {width:.2f} mm < IPC-2221 {need:.2f} mm,"
-                            f"且不是短頸(長 {length:.2f} mm、I²R {loss:.2f} W)")
 
-    per_via = via_amps()
-    print(f"過孔(鑽 {pcbgen.VIA_DRILL} mm、孔銅 {VIA_PLATING_MM * 1000:g} µm):每個 {per_via:.2f} A")
-    for name, amps, why in power_stage.VIA_LINKS:
-        need, have = math.ceil(amps / per_via), len(vias.get(name, []))
-        print(f"  {'OK' if have >= need else '!!'} {name:12} {amps:4.1f} A  {have} 個(至少 {need})  {why}")
-        if have < need:
-            problems.append(f"「{name}」過孔 {have} 個 < {need}({amps} A)")
+def pad_name(p) -> str:
+    return f"{p.GetParentFootprint().GetReference()}.{p.GetNumber()}"
+
+
+def class_clearance(net: str) -> float:
+    for _, _, clearance, *patterns in NETCLASSES:
+        if any(fnmatch.fnmatchcase(net, p) for p in patterns):
+            return clearance
+    return pcbgen.CLEARANCE if net in POWER else DEFAULT_CLASS[1]
+
+
+# 平面網路 → 內層。這些網的 SMD 焊盤由 lib/fanout.py 先打好過孔(freerouting 不在平面層走線,也就不扇出)
+PLANE_NETS = {"GND": pcbnew.In1_Cu, "+3V3": pcbnew.In2_Cu, "+5V": pcbnew.In2_Cu}
+
+
+def add_fanout(board) -> list[str]:
+    """平面網路焊盤的扇出過孔;找不到位置的列出(交給 freerouting,不擋流程)。"""
+    r = fanout.fanout(board, PLANE_NETS, pcbgen.VIA_D, pcbgen.VIA_DRILL, class_width, class_clearance)
+    print(f"平面網路扇出(lib/fanout.py):放了 {r['placed']} 個過孔;找不到位置 {len(r['skipped'])} 個:"
+          f"{' '.join(r['skipped'])}")
+    return []
+
+
+def add_feeds(board) -> list[str]:
+    """外層供電支線(gen/feeds.py):鋪銅、過孔,填充後檢查;最後每支目標腳要接到同網的 In2 平面。"""
+    zones = make_pours(board, feeds.POURS)
+    vias = make_vias(board, zones, feeds.VIA_FIELDS)
+    pcbnew.ZONE_FILLER(board).Fill(board.Zones())
+    print("外層供電支線(gen/feeds.py):")
+    problems = check_pours(zones, vias, feeds.CORRIDORS, feeds.VIA_LINKS, feeds.VIA_ALSO)
+    board.BuildConnectivity()
+    conn = board.GetConnectivity()
+    for ref, *nums in feeds.PLANE_PADS:
+        for p in board.FindFootprintByReference(ref).Pads():
+            if p.GetNumber() not in nums:
+                continue
+            planes = [z for z in conn.GetConnectedItems(p) if z.GetClass() == "ZONE"
+                      and z.GetLayer() == pcbnew.In2_Cu and z.GetNetname() == p.GetNetname()]
+            if not planes:
+                problems.append(f"{pad_name(p)}({p.GetNetname()})沒接到 In2 平面")
     return problems
 
 
@@ -472,6 +554,8 @@ if __name__ == "__main__":
     bad += power_width_problems({n.GetNetname() for n in board.GetNetsByName().values()})
     bad += add_power_stage(board)
     bad += add_diff_pairs(board)
+    bad += add_feeds(board)
+    bad += add_fanout(board)
     if bad:
         print("!! 電源 / 差分線自檢失敗,拒絕寫出:")
         for p in bad:

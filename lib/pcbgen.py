@@ -123,6 +123,16 @@ class BoardSpec:
     mounting_hole_fp: str = "MountingHole:MountingHole_3.2mm_M3"
     # 铜层数:2 或 4(4 层时内层 In1/In2 由 KiCad 默认叠层给出,差分阻抗另算)。
     copper_layers: int = 2
+    # Default 网络类别的 (线宽, 间距) mm。None = 下面的 TRACK_W / CLEARANCE。
+    # 密集板(0.5mm QFN、0.4mm 连接器)用 0.25/0.2 时自动布线扇出不出来,要调细。
+    default_class: tuple = None
+    # Power 网络类别的线宽 mm。None = POWER_W。
+    power_width: float = None
+    # 最小线宽 mm(DRC)。None = TRACK_MIN。
+    track_min: float = None
+    # 只放电源平面、不走线的内层(例 ("In1.Cu", "In2.Cu")):层类型设成 power,
+    # Specctra DSN 跟着标 (type power),freerouting 就不会在上面布线、切开平面。
+    plane_layers: tuple = ()
     extra: dict = field(default_factory=dict)
 
 
@@ -157,16 +167,19 @@ def build(spec: BoardSpec, net_path: Path, out: Path) -> None:
         raise SystemExit(f"copper_layers 只支持 2 或 4,收到 {spec.copper_layers}")
     ds.SetCopperLayerCount(spec.copper_layers)
     nc = ds.m_NetSettings.GetDefaultNetclass()
-    nc.SetTrackWidth(mm(TRACK_W))
-    nc.SetClearance(mm(CLEARANCE))
+    track_w, clearance = spec.default_class or (TRACK_W, CLEARANCE)
+    nc.SetTrackWidth(mm(track_w))
+    nc.SetClearance(mm(clearance))
     nc.SetViaDiameter(mm(VIA_D))
     nc.SetViaDrill(mm(VIA_DRILL))
-    ds.m_TrackMinWidth = mm(TRACK_MIN)
+    ds.m_TrackMinWidth = mm(spec.track_min or TRACK_MIN)
+    for name in spec.plane_layers:
+        board.SetLayerType(board.GetLayerID(name), pcbnew.LT_POWER)
     ds.m_MinThroughDrill = mm(spec.min_hole)
 
     ns = ds.m_NetSettings
     power = pcbnew.NETCLASS("Power")
-    power.SetTrackWidth(mm(POWER_W))
+    power.SetTrackWidth(mm(spec.power_width or POWER_W))
     power.SetClearance(mm(CLEARANCE))
     power.SetViaDiameter(mm(VIA_D))
     power.SetViaDrill(mm(VIA_DRILL))
