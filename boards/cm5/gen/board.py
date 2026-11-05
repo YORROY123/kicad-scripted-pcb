@@ -262,7 +262,10 @@ add("R61", "Device", "R", 600, 116, "470", R0402, {"1": "ETH_LEDY_K", "2": "ETH_
 #     (README「差分線」)。USB2 的 DP/DM 不能對調。
 #   - VBUS_DET 接 3.3V(表 3-2:bus-powered 接 VDD33A);RESET_N 接 PG_3V3(+3V3 正常才放開);
 #     TEST 接地;不接 EEPROM:MAC 寫進晶片 OTP(Linux lan78xx 可用 ethtool -E 寫),
-#     EEDI 10k 下拉讓 EEPROM 偵測讀到 00(不是 A5h);PME_MODE 10k 下拉;其餘 GPIO 不接。
+#     EEDI 10k 下拉讓 EEPROM 偵測讀到 00(不是 A5h);其餘 GPIO 不接。
+#   - PME_MODE(43 腳)直接接地(往內接散熱焊盤):只在 PME 模式下取樣(§14,我們不用 PME);
+#     GPIO7 沒有 EEPROM/OTP 設定時預設是輸入、開汲(GPIO_CFG1 預設 0),接地不會短路。
+#     原本 10k 下拉,但 43 腳夾在兩支 1.2V(42、44)中間,往外拉線就把 42、44 隔開,北側佈不通。
 #   - LED0 / LED1(與 EECLK/EEDO 共用)預設低電位有效 → 綠 / 黃燈經 470Ω,陽極接 +3V3。
 #     ⚠ 沒有 EEPROM/OTP 設定時 LED 腳是否預設啟用,要看 lan78xx 驅動(寫進待確認)。
 #   - 庫存風險:LAN7800/Y9X(C633489)JLC 只剩 89 顆,打樣足夠;量產前要另找料源。
@@ -286,7 +289,7 @@ def lan7800(i: int, x: float, y: float, ss_swap: bool = False) -> None:
             "31": f"{u}_RX_{'N' if ss_swap else 'P'}", "32": f"{u}_RX_{'P' if ss_swap else 'N'}",
             "23": "+3V3", "35": "PG_3V3", "34": "GND", "16": None, "17": f"{u}_EEDI",
             "18": f"{u}_LEDG_K", "19": f"{u}_LEDY_K", "24": None, "33": None, "22": None,
-            "43": f"{u}_PMEMODE", "49": "GND",
+            "43": "GND", "49": "GND",
         })
     flag(f"{u}_1V2", x - 40, y + 10)          # 1.2V 由電感輸出
     cx = x - 60
@@ -306,7 +309,6 @@ def lan7800(i: int, x: float, y: float, ss_swap: bool = False) -> None:
     add(f"C{ref(118)}", "Device", "C", cx, y + 56, "27pF", C0402, {"1": f"{u}_XI", "2": "GND"})
     add(f"C{ref(119)}", "Device", "C", cx + 20, y + 56, "27pF", C0402, {"1": f"{u}_XO", "2": "GND"})
     add(f"R{ref(102)}", "Device", "R", x + 40, y + 20, "10k", R0402, {"1": f"{u}_EEDI", "2": "GND"})
-    add(f"R{ref(103)}", "Device", "R", x + 48, y + 20, "10k", R0402, {"1": f"{u}_PMEMODE", "2": "GND"})
     add(f"C{ref(120)}", "Device", "C", x + 40, y - 6, "100nF", C0402, {"1": f"{u}_TX_P", "2": f"CM5U{i}_RX_{'N' if ss_swap else 'P'}"})
     add(f"C{ref(121)}", "Device", "C", x + 48, y - 6, "100nF", C0402, {"1": f"{u}_TX_N", "2": f"CM5U{i}_RX_{'P' if ss_swap else 'N'}"})
     add(f"D{40 + 2 * i}", "Device", "LED", x + 60, y + 14, "GREEN", LED0805, {"2": "+3V3", "1": f"{u}_LEDG_K2"})
