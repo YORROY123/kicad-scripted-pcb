@@ -136,6 +136,9 @@ def fanout(board, plane_layer_of: dict, via_d: float, via_drill: float, width_of
                     n_ep += 1
             if n_ep:
                 placed += n_ep
+                # 走线接到 EP 的脚(例:cm5 U10 6、8 脚)排在 EP 后面,要看得到新的散热过孔
+                board.BuildConnectivity()
+                conn = board.GetConnectivity()
                 continue
         cx, cy = _mm(fp.GetX()), _mm(fp.GetY())
         own = pad.GetEffectiveShape(F)

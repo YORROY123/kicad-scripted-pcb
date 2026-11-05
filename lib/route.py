@@ -22,20 +22,154 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from pcbgen import mm, stable_uuids  # noqa: E402
 
 
-def export_dsn(pcb: Path, dsn: Path) -> None:
+def export_dsn(pcb: Path, dsn: Path, only: set = None) -> None:
     board = pcbnew.LoadBoard(str(pcb))
     stable_uuids(board, pcb.stem)  # DSN 照 UUID 排序:汇出前统一
     board.Save(str(pcb))
     if not pcbnew.ExportSpecctraDSN(board, str(dsn)):
         raise SystemExit("ExportSpecctraDSN 失败")
+    text = dsn.read_text(encoding="utf-8")
+    if any(not z.GetIsRuleArea() for z in board.Zones()):
+        pcbnew.ZONE_FILLER(board).Fill(board.Zones())  # 只为了读填充范围;不存档
+        text = filled_planes(text, board)
+        print("  铜区照填充后的范围汇出(plane)")
     planes = [board.GetLayerName(lid) for lid in board.GetEnabledLayers().CuStack()
               if board.GetLayerType(lid) == pcbnew.LT_POWER]
     if planes:
         signal = [board.GetLayerName(lid) for lid in board.GetEnabledLayers().CuStack()
                   if board.GetLayerType(lid) != pcbnew.LT_POWER]
-        dsn.write_text(plane_layers_off(dsn.read_text(encoding="utf-8"), planes, signal), encoding="utf-8")
+        text = plane_layers_off(text, planes, signal)
         print(f"  {', '.join(planes)}:只接平面、不走线(use_layer {' '.join(signal)})")
+    if only:
+        text = only_nets(text, only)
+        print(f"  只布 {len(only)} 个网:{' '.join(sorted(only))}")
+    dsn.write_text(text, encoding="utf-8")
     print(f"wrote {dsn.name}")
+
+
+PLANE_RE = re.compile(r"\n[ \t]*\(plane \S+ \(polygon [^()]*\)\)")
+MIN_PLANE_MM2 = 0.05
+
+
+def filled_planes(text: str, board) -> str:
+    """DSN 的 (plane 网 (polygon …)) 换成每个铜区填充后的外轮廓(每个岛一个 plane)。
+
+    KiCad 汇出的是铜区的外框。外框边上的铜常常因为让开别的网(焊盘、过孔的间距)而填不到,
+    freerouting 却以为那里有铜,会把走线接到外框边上:导入后 KiCad 重新填充,那段线就悬空
+    (cm5 第一次 30 轮:+5V 支线、U62 鋪銅旁的 +5V 线都这样断开)。填充的洞(让开的过孔)不汇出:
+    洞里本来就是别的网的东西,freerouting 不会在那里接。"""
+    out = []
+    for z in board.Zones():
+        if z.GetIsRuleArea():
+            continue
+        net = z.GetNetname()
+        q = f'"{net}"' if re.search(r'[\s()"]', net) else net
+        for lid in z.GetLayerSet().CuStack():
+            fill = z.GetFilledPolysList(lid)
+            for i in range(fill.OutlineCount()):
+                ol = fill.Outline(i)
+                if abs(ol.Area()) / 1e12 < MIN_PLANE_MM2:
+                    continue
+                pts = [ol.CPoint(j) for j in range(ol.PointCount())] + [ol.CPoint(0)]
+                xy = "  ".join(f"{p.x / 1000:g} {-p.y / 1000:g}" for p in pts)
+                out.append(f"\n    (plane {q} (polygon {board.GetLayerName(lid)} 0  {xy}))")
+    found = PLANE_RE.findall(text)
+    if not found:
+        raise SystemExit("DSN 里没有 (plane …),板上却有铜区")
+    first = text.index(found[0])
+    text = PLANE_RE.sub("", text)
+    return text[:first] + "".join(out) + text[first:]
+
+
+TOKEN_RE = re.compile(r'\(|\)|"[^"]*"|[^\s()]+')
+QUOTE = '(string_quote ")'
+
+
+def sexp_parse(text: str) -> list:
+    """DSN → 巢状 list(字串原样保留,含引号)。(string_quote ") 那个落单的引号先换掉。"""
+    stack = [[]]
+    for tok in TOKEN_RE.findall(text.replace(QUOTE, "(string_quote QUOTE_CHAR)")):
+        if tok == "(":
+            stack.append([])
+        elif tok == ")":
+            done = stack.pop()
+            stack[-1].append(done)
+        else:
+            stack[-1].append(tok)
+    if len(stack) != 1 or len(stack[0]) != 1:
+        raise SystemExit("DSN 括号不成对")
+    return stack[0][0]
+
+
+def sexp_dump(node, depth: int = 0) -> str:
+    if not isinstance(node, list):
+        return node
+    if depth >= 3 or not any(isinstance(c, list) for c in node):
+        return "(" + " ".join(sexp_dump(c, 9) for c in node) + ")"
+    pad = "\n" + "  " * (depth + 1)
+    return "(" + " ".join(c for c in node if not isinstance(c, list)) + "".join(
+        pad + sexp_dump(c, depth + 1) for c in node if isinstance(c, list)) + ")"
+
+
+def only_nets(text: str, keep: set, outer=("F.Cu", "B.Cu")) -> str:
+    """只留 keep 里的网给 freerouting 布(分阶段布线的第一阶段:回授、晶振这些要先占好位置的线)。
+
+    其他网从 network 与类别里拿掉:它们的焊盘变成没有网的障碍;已经画好的线、过孔去掉 (net …)
+    变成障碍;外层铜区(别的网的鋪銅)改成 keepout,内层平面拿掉(过孔要穿过去,真板上会让开)。
+    留下的网间距取全板最大的类别间距(障碍没有网,freerouting 不知道它们的类别)。"""
+    tree = sexp_parse(text)
+    def name(n):
+        return n.strip('"')
+    found = set()
+    for sec in tree:
+        if not isinstance(sec, list) or not sec:
+            continue
+        if sec[0] == "network":
+            # 留下的网的间距一律取全板最大:没有网的障碍,freerouting 只用走线这一边的类别间距
+            # (cm5 第一次:FB 离 +54V 焊盘 0.233 < HV54 0.25,共 21 处)
+            rules = [r for c in sec if isinstance(c, list) and c[0] == "class"
+                     for r in c if isinstance(r, list) and r[0] == "rule"]
+            worst = max(float(x[1]) for r in rules for x in r if isinstance(x, list) and x[0] == "clearance")
+            for r in rules:
+                for x in r:
+                    if isinstance(x, list) and x[0] == "clearance":
+                        x[1] = f"{worst:g}"
+            out = []
+            for c in sec:
+                if isinstance(c, list) and c[0] == "net":
+                    if name(c[1]) not in keep:
+                        continue
+                    found.add(name(c[1]))
+                elif isinstance(c, list) and c[0] == "class":
+                    c[2:] = [t for t in c[2:] if isinstance(t, list) or name(t) in keep]
+                    if not any(not isinstance(t, list) for t in c[2:]):
+                        continue
+                out.append(c)
+            sec[:] = out
+        elif sec[0] == "wiring":
+            for c in sec[1:]:
+                c[:] = [t for t in c if not (isinstance(t, list) and t[0] == "net" and name(t[1]) not in keep)]
+        elif sec[0] == "structure":
+            # 没有网的障碍照板子层级的 (rule (clearance …)) 算(cm5 第二次:类别间距已取 0.25,
+            # FB 离 GND 焊盘仍只有 0.158)→ 也取全板最大。network 在 structure 后面,先放记号
+            for r in sec:
+                if isinstance(r, list) and r[0] == "rule":
+                    for x in r:
+                        if isinstance(x, list) and x[0] == "clearance" and len(x) == 2:
+                            x[1] = "WORST_CLEARANCE"
+            out = []
+            for c in sec:
+                if isinstance(c, list) and c[0] == "plane" and name(c[1]) not in keep:
+                    if c[2][1] not in outer:
+                        continue
+                    c = ["keepout", '""', c[2]]
+                out.append(c)
+            sec[:] = out
+    missing = keep - found
+    if missing:
+        raise SystemExit(f"DSN 里没有这些网:{', '.join(sorted(missing))}")
+    out = sexp_dump(tree).replace("(string_quote QUOTE_CHAR)", QUOTE)
+    return out.replace("WORST_CLEARANCE", f"{worst:g}") + "\n"
 
 
 def plane_layers_off(text: str, planes: list, signal: list) -> str:
@@ -111,7 +245,9 @@ def clear_routing(board) -> None:
             board.Delete(z)
 
 
-def import_ses(pcb: Path, ses: Path) -> None:
+def import_ses(pcb: Path, ses: Path, lock: bool = False) -> None:
+    """lock:分阶段布线的第一阶段。导入的线全部锁定、不铺 GND:下一阶段 clear_routing 会留下它们,
+    DSN 也标成不可动。"""
     board = pcbnew.LoadBoard(str(pcb))
     # 重复执行时先清掉上一轮的结果,避免叠加
     clear_routing(board)
@@ -119,6 +255,23 @@ def import_ses(pcb: Path, ses: Path) -> None:
         raise SystemExit("ImportSpecctraSES 失败")
     tracks = [t for t in board.GetTracks() if t.Type() == pcbnew.PCB_TRACE_T]
     vias = [t for t in board.GetTracks() if t.Type() == pcbnew.PCB_VIA_T]
+    # freerouting 2.5.0 扇出时会把线收到类别线宽的 60% / 50%,不管 neck_width(上游 #978,
+    # 修在 master、还没发版):cm5 0.15 → 0.09 < 板子最小线宽 0.1。只加宽到最小线宽,间距交给 DRC。
+    tmin = board.GetDesignSettings().m_TrackMinWidth
+    thin = [t for t in tracks if not t.IsLocked() and t.GetWidth() < tmin]
+    for t in thin:
+        t.SetWidth(tmin)
+    if thin:
+        print(f"  {len(thin)} 段线比最小线宽 {tmin / 1e6:g} mm 窄,已加宽")
+    if lock:
+        new = [t for t in board.GetTracks() if not t.IsLocked()]
+        for t in new:
+            t.SetLocked(True)
+        pcbnew.ZONE_FILLER(board).Fill(board.Zones())
+        stable_uuids(board, pcb.stem)
+        board.Save(str(pcb))
+        print(f"imported {ses.name}: locked {len(new)} new tracks/vias (stage 1)")
+        return
 
     gnd_pour(board, pcbnew.F_Cu)
     gnd_pour(board, pcbnew.B_Cu)
@@ -132,10 +285,11 @@ def import_ses(pcb: Path, ses: Path) -> None:
 
 
 if __name__ == "__main__":
-    # route.py dsn|ses <板名> <目录>
+    # route.py dsn <板名> <目录> [网,网…]   最后一个参数:只布这些网(分阶段的第一阶段)
+    # route.py ses|lock <板名> <目录>        lock:导入后锁定、不铺 GND
     step, name, d = sys.argv[1], sys.argv[2], Path(sys.argv[3]).resolve()
     pcb = d / f"{name}.kicad_pcb"
     if step == "dsn":
-        export_dsn(pcb, d / f"{name}.dsn")
+        export_dsn(pcb, d / f"{name}.dsn", set(sys.argv[4].split(",")) if len(sys.argv) > 4 else None)
     else:
-        import_ses(pcb, d / f"{name}.ses")
+        import_ses(pcb, d / f"{name}.ses", lock=step == "lock")
