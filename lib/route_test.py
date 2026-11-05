@@ -1,4 +1,5 @@
-"""lib/route.py 的 clear_routing:重新导入 .ses 前清掉什么、留下什么;plane_layers_off:DSN 的平面层。
+"""lib/route.py 的 clear_routing:重新导入 .ses 前清掉什么、留下什么;plane_layers_off:DSN 的平面层;
+only_nets:分阶段布线只留部分网。
 
     python lib/route_test.py        (用 KiCad 自带的 python;不需要先 build)
 
@@ -14,7 +15,7 @@ import pcbnew
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from pcbgen import mm  # noqa: E402
-from route import clear_routing, gnd_pour, plane_layers_off  # noqa: E402
+from route import clear_routing, gnd_pour, only_nets, plane_layers_off, sexp_parse  # noqa: E402
 
 BOARDS = Path(__file__).resolve().parent.parent / "boards"
 
@@ -133,7 +134,59 @@ def plane_layers():
     print("ok    plane_layers_off: power -> signal, use_layer on every class; bad input refused")
 
 
+STAGE_DSN = """(pcb "x.dsn"
+  (parser (string_quote ") (space_in_quoted_tokens on))
+  (structure
+    (layer F.Cu (type signal))
+    (rule (width 150) (clearance 150) (clearance 37.5 (type smd_smd)))
+    (plane GND (polygon F.Cu 0  0 0  10 0  10 10  0 0))
+    (plane GND (polygon In1.Cu 0  0 0  10 0  10 10  0 0))
+    (plane FB (polygon B.Cu 0  0 0  5 0  5 5  0 0))
+  )
+  (network
+    (net FB (pins U1-5 R1-2))
+    (net GND (pins U1-6 C1-2))
+    (net "odd (name)" (pins U1-7))
+    (class kicad_default FB "odd (name)" (circuit (use_via V)) (rule (width 150) (clearance 150)))
+    (class Power GND (circuit (use_via V)) (rule (width 250) (clearance 250)))
+  )
+  (wiring
+    (wire (path F.Cu 190  1 1  2 2)(net GND)(type fix))
+    (via "V" 3 3 (net FB)(type fix))
+  )
+)
+"""
+
+
+def stage_nets():
+    out = only_nets(STAGE_DSN, {"FB", "odd (name)"})
+    tree = sexp_parse(out)
+    sec = {c[0]: c for c in tree if isinstance(c, list)}
+    nets = [c[1] for c in sec["network"] if c[0] == "net"]
+    classes = [c[1] for c in sec["network"] if c[0] == "class"]
+    assert nets == ["FB", '"odd (name)"'] and classes == ["kicad_default"], out
+    # 类别与板子层级(没有网的障碍用它)都取被拿掉的 Power 的间距;smd_smd 不动
+    assert out.count("(clearance 250)") == 2 and "(clearance 150)" not in out, out
+    assert "(clearance 37.5 (type smd_smd))" in out, out
+    # GND 的线变成没有网的障碍,FB 的过孔照旧带网
+    wire, via = sec["wiring"][1], sec["wiring"][2]
+    assert not any(isinstance(t, list) and t[0] == "net" for t in wire), out
+    assert ["net", "FB"] in via, out
+    # 外层 GND 鋪銅 -> keepout,内层 GND 平面拿掉,FB 自己的 plane 留着
+    kinds = [(c[0], c[-1][1]) for c in sec["structure"] if c[0] in ("plane", "keepout")]
+    assert kinds == [("keepout", "F.Cu"), ("plane", "B.Cu")], kinds
+    assert '(string_quote ")' in out, out
+    try:
+        only_nets(STAGE_DSN, {"FB", "NOPE"})
+    except SystemExit:
+        pass
+    else:
+        raise AssertionError("only_nets 遇到不存在的网应该失败")
+    print("ok    only_nets: other nets become obstacles, outer pours keepouts, inner planes dropped")
+
+
 if __name__ == "__main__":
+    stage_nets()
     plane_layers()
     synthetic()
     real_boards()
