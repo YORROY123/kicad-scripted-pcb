@@ -98,3 +98,51 @@
 (rule "diff pair HDMI0 CK width"
   (condition "A.NetName == 'HDMI0_CK_P' || A.NetName == 'HDMI0_CK_N'")
   (constraint track_width (min 0.145mm)))
+(rule "diff pair LAN0 MDI TR0"
+  (condition "(A.NetName == 'LAN0_TR0P' && B.NetName == 'LAN0_TR0N') || (A.NetName == 'LAN0_TR0N' && B.NetName == 'LAN0_TR0P')")
+  (constraint clearance (min 0.19mm)))
+(rule "diff pair LAN0 MDI TR0 width"
+  (condition "A.NetName == 'LAN0_TR0P' || A.NetName == 'LAN0_TR0N'")
+  (constraint track_width (min 0.145mm)))
+(rule "diff pair LAN0 MDI TR1"
+  (condition "(A.NetName == 'LAN0_TR1P' && B.NetName == 'LAN0_TR1N') || (A.NetName == 'LAN0_TR1N' && B.NetName == 'LAN0_TR1P')")
+  (constraint clearance (min 0.19mm)))
+(rule "diff pair LAN0 MDI TR1 width"
+  (condition "A.NetName == 'LAN0_TR1P' || A.NetName == 'LAN0_TR1N'")
+  (constraint track_width (min 0.145mm)))
+(rule "diff pair LAN0 MDI TR2"
+  (condition "(A.NetName == 'LAN0_TR2P' && B.NetName == 'LAN0_TR2N') || (A.NetName == 'LAN0_TR2N' && B.NetName == 'LAN0_TR2P')")
+  (constraint clearance (min 0.19mm)))
+(rule "diff pair LAN0 MDI TR2 width"
+  (condition "A.NetName == 'LAN0_TR2P' || A.NetName == 'LAN0_TR2N'")
+  (constraint track_width (min 0.145mm)))
+(rule "diff pair LAN0 MDI TR3"
+  (condition "(A.NetName == 'LAN0_TR3P' && B.NetName == 'LAN0_TR3N') || (A.NetName == 'LAN0_TR3N' && B.NetName == 'LAN0_TR3P')")
+  (constraint clearance (min 0.19mm)))
+(rule "diff pair LAN0 MDI TR3 width"
+  (condition "A.NetName == 'LAN0_TR3P' || A.NetName == 'LAN0_TR3N'")
+  (constraint track_width (min 0.145mm)))
+(rule "diff pair LAN1 MDI TR0"
+  (condition "(A.NetName == 'LAN1_TR0P' && B.NetName == 'LAN1_TR0N') || (A.NetName == 'LAN1_TR0N' && B.NetName == 'LAN1_TR0P')")
+  (constraint clearance (min 0.19mm)))
+(rule "diff pair LAN1 MDI TR0 width"
+  (condition "A.NetName == 'LAN1_TR0P' || A.NetName == 'LAN1_TR0N'")
+  (constraint track_width (min 0.145mm)))
+(rule "diff pair LAN1 MDI TR1"
+  (condition "(A.NetName == 'LAN1_TR1P' && B.NetName == 'LAN1_TR1N') || (A.NetName == 'LAN1_TR1N' && B.NetName == 'LAN1_TR1P')")
+  (constraint clearance (min 0.19mm)))
+(rule "diff pair LAN1 MDI TR1 width"
+  (condition "A.NetName == 'LAN1_TR1P' || A.NetName == 'LAN1_TR1N'")
+  (constraint track_width (min 0.145mm)))
+(rule "diff pair LAN1 MDI TR2"
+  (condition "(A.NetName == 'LAN1_TR2P' && B.NetName == 'LAN1_TR2N') || (A.NetName == 'LAN1_TR2N' && B.NetName == 'LAN1_TR2P')")
+  (constraint clearance (min 0.19mm)))
+(rule "diff pair LAN1 MDI TR2 width"
+  (condition "A.NetName == 'LAN1_TR2P' || A.NetName == 'LAN1_TR2N'")
+  (constraint track_width (min 0.145mm)))
+(rule "diff pair LAN1 MDI TR3"
+  (condition "(A.NetName == 'LAN1_TR3P' && B.NetName == 'LAN1_TR3N') || (A.NetName == 'LAN1_TR3N' && B.NetName == 'LAN1_TR3P')")
+  (constraint clearance (min 0.19mm)))
+(rule "diff pair LAN1 MDI TR3 width"
+  (condition "A.NetName == 'LAN1_TR3P' || A.NetName == 'LAN1_TR3N'")
+  (constraint track_width (min 0.145mm)))
