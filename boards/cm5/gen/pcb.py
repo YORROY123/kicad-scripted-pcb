@@ -376,10 +376,12 @@ LINK_DY = -0.85     # 42–44 橫線:腳中心往北 mm(離 43 腳焊盤 0.33)
 def add_lan_north(board) -> list[str]:
     from pcbnew import VECTOR2I as V
 
-    def track(net, pts, w):
+    def track(net, pts, w, layer=pcbnew.F_Cu):
         for a, b in zip(pts, pts[1:]):
+            if a == b:
+                continue
             t = pcbnew.PCB_TRACK(board)
-            t.SetLayer(pcbnew.F_Cu)
+            t.SetLayer(layer)
             t.SetStart(a)
             t.SetEnd(b)
             t.SetWidth(pcbgen.mm(w))
@@ -432,6 +434,163 @@ def add_lan_north(board) -> list[str]:
         # 43 腳往內接散熱焊盤
         ep = xy(pad(u, "49"))
         track("GND", [xy(p43), V(xy(p43).x, xy(p43).y + (pcbgen.mm(1.2) if ep.y > xy(p43).y else -pcbgen.mm(1.2)))], 0.2)
+        bad += lan_rest(u, pad, track)
+    return bad
+
+
+def add_u10_ss(board) -> list[str]:
+    """LM5146 SS(3 腳)直上 C18 1 腳(gen/placement.py 擺在 3 腳正上方)。不先佈的話 COMP 會從 4 腳往上再往東繞回來把它關住。"""
+    pads = {q.GetNumber(): q for q in board.FindFootprintByReference("U10").Pads()}
+    c1 = {q.GetNumber(): q for q in board.FindFootprintByReference("C18").Pads()}["1"]
+    p3 = pads["3"]
+    if p3.GetNetname() != "SS" or c1.GetNetname() != "SS":
+        return [f"U10 SS 手佈:U10.3 是 {p3.GetNetname()}、C18.1 是 {c1.GetNetname()}"]
+    a, b = p3.GetPosition(), c1.GetPosition()
+    d = abs(b.x - a.x)
+    pts = [a, pcbnew.VECTOR2I(a.x, b.y + pcbgen.mm(0.58) + d), pcbnew.VECTOR2I(b.x, b.y + pcbgen.mm(0.58)), b]
+    for u, v in zip(pts, pts[1:]):
+        t = pcbnew.PCB_TRACK(board)
+        t.SetLayer(pcbnew.F_Cu)
+        t.SetStart(u)
+        t.SetEnd(v)
+        t.SetWidth(pcbgen.mm(0.15))
+        t.SetNet(board.FindNet("SS"))
+        t.SetLocked(True)
+        board.Add(t)
+    return []
+
+
+HUB_XI_JOG = 0.18   # XI(U61 33 腳)往東偏,讓開 C207(PLLFILT)的焊盤
+HUB_XI_DY = 1.05    # XI 橫線在晶振 1 腳中心往南 mm(C209 焊盤與 C207 焊盤之間)
+
+
+def add_hub_xi(board) -> list[str]:
+    """Hub 晶振 XI:33 腳往上、在晶振南邊往西、上到晶振 1 腳再接 C208。freerouting 常把 XO 繞到 33 腳上方把它關住。"""
+    def pad(ref, num):
+        return {q.GetNumber(): q for q in board.FindFootprintByReference(ref).Pads()}[num]
+
+    def mmxy(q):
+        return (q.GetPosition().x / 1e6 - pcbgen.ORIGIN[0], q.GetPosition().y / 1e6 - pcbgen.ORIGIN[1])
+
+    p33, y1, c1 = pad("U61", "33"), pad("Y60", "1"), pad("C208", "1")
+    bad = [f"Hub XI 手佈:{q.GetParentFootprint().GetReference()}.{q.GetNumber()} 是 {q.GetNetname()}"
+           for q in (p33, y1, c1) if q.GetNetname() != "HUB_XI"]
+    if bad:
+        return bad
+    (x, y), (xy1, yy1) = mmxy(p33), mmxy(y1)
+    xj, yl = x + HUB_XI_JOG, yy1 + HUB_XI_DY
+    pts = [(x, y), (x, y - 0.51), (xj, y - 0.51 - HUB_XI_JOG), (xj, yl), (xy1, yl), (xy1, yy1), mmxy(c1)]
+    for a, b in zip(pts, pts[1:]):
+        t = pcbnew.PCB_TRACK(board)
+        t.SetLayer(pcbnew.F_Cu)
+        t.SetStart(pcbgen.at(*a))
+        t.SetEnd(pcbgen.at(*b))
+        t.SetWidth(pcbgen.mm(0.15))
+        t.SetNet(board.FindNet("HUB_XI"))
+        t.SetLocked(True)
+        board.Add(t)
+    return bad
+
+
+VCC3_DY = 1.0       # VCC3 橫線在 17 腳中心往南 mm(避開 16 腳)
+
+
+def add_u20_vcc(board) -> list[str]:
+    """TPS568230 的 VCC3(17 腳)→ 橫線 → R23 1 腳、C48 1 腳;MODE3(15 腳)→ R23 2 腳。先手佈再扇出。"""
+    def pad(ref, num):
+        return {q.GetNumber(): q for q in board.FindFootprintByReference(ref).Pads()}[num]
+
+    def mmxy(q):
+        return (q.GetPosition().x / 1e6 - pcbgen.ORIGIN[0], q.GetPosition().y / 1e6 - pcbgen.ORIGIN[1])
+
+    p15, p17, r1, r2, c1 = pad("U20", "15"), pad("U20", "17"), pad("R23", "1"), pad("R23", "2"), pad("C48", "1")
+    bad = [f"U20 VCC3 手佈:{q.GetParentFootprint().GetReference()}.{q.GetNumber()} 是 {q.GetNetname()}"
+           for q, n in ((p15, "MODE3"), (r2, "MODE3"), (p17, "VCC3"), (r1, "VCC3"), (c1, "VCC3")) if q.GetNetname() != n]
+    if bad:
+        return bad
+
+    def track(net, pts, w):
+        for a, b in zip(pts, pts[1:]):
+            t = pcbnew.PCB_TRACK(board)
+            t.SetLayer(pcbnew.F_Cu)
+            t.SetStart(pcbgen.at(*a))
+            t.SetEnd(pcbgen.at(*b))
+            t.SetWidth(pcbgen.mm(w))
+            t.SetNet(board.FindNet(net))
+            t.SetLocked(True)
+            board.Add(t)
+
+    (x17, y17), (xr1, yr1), (xc, yc) = mmxy(p17), mmxy(r1), mmxy(c1)
+    yl = y17 + VCC3_DY
+    track("VCC3", [(x17, y17), (x17, yl), (min(xr1, xc), yl)], 0.3)
+    track("VCC3", [(xr1, yl), (xr1, yr1)], 0.3)
+    track("VCC3", [(xc, yl), (xc, yc)], 0.3)
+    track("MODE3", [mmxy(p15), mmxy(r2)], 0.2)
+    return bad
+
+
+# REXT 電阻、FILT 與北側 2.5V 電容(gen/placement.py)
+LAN_REST = {"U40": ("R100", "C117", "C109"), "U41": ("R130", "C147", "C139")}
+REXT_X = 0.15        # REXT 線在 FILT、2.5V 兩顆電容之間:47 腳往東偏 mm
+V45_DY = -1.25       # 45 腳(2.5V)正上方的過孔:離腳中心 mm(避開 44 腳往北那段)
+V21_DY = 1.0         # 21 腳(1.2V)正下方的過孔
+
+
+def lan_rest(u, pad, track) -> list[str]:
+    """北側 47 腳(REXT)、48 腳(FILT)、45 腳(2.5V)與南側 21 腳(1.2V)先手佈,扇出才不會把 +3V3 過孔打在出口上。
+
+    45 腳經過孔在 B.Cu 接西側 3、6、9、12 腳的過孔(gen/diff_pairs.py V2V5_X);21 腳經過孔在 B.Cu 接 25 腳那個過孔。"""
+    from pcbnew import VECTOR2I as V
+    rext, cfilt, c25 = LAN_REST[u]
+    p = {n: pad(u, n) for n in ("12", "15", "21", "25", "45", "47", "48")}
+    want = ((p["47"], "_REXT"), (pad(rext, "1"), "_REXT"), (p["48"], "_FILT"), (pad(cfilt, "1"), "_FILT"),
+            (p["45"], "_2V5"), (pad(c25, "1"), "_2V5"), (p["12"], "_2V5"), (p["15"], "_1V2"), (p["21"], "_1V2"), (p["25"], "_1V2"))
+    bad = [f"{u} 手佈:{q.GetParentFootprint().GetReference()}.{q.GetNumber()} 是 {q.GetNetname()}"
+           for q, suf in want if not q.GetNetname().endswith(suf)]
+    if bad:
+        return bad
+    xy = lambda q: q.GetPosition()  # noqa: E731
+    mm = pcbgen.mm
+
+    def via(net, at):
+        v = pcbnew.PCB_VIA(board)
+        v.SetPosition(at)
+        v.SetWidth(mm(pcbgen.VIA_D))
+        v.SetDrill(mm(pcbgen.VIA_DRILL))
+        v.SetNet(board.FindNet(net))
+        v.SetLocked(True)
+        board.Add(v)
+
+    board = p["47"].GetBoard()
+    # REXT:47 腳往上,斜到兩顆電容中間再直上電阻 1 腳
+    r1, a = xy(pad(rext, "1")), xy(p["47"])
+    xr = a.x + mm(REXT_X)
+    track(p["47"].GetNetname(), [a, V(a.x, a.y - mm(0.65)), V(xr, a.y - mm(0.65) - mm(REXT_X)), V(xr, r1.y), r1], 0.15)
+    # FILT:48 腳直上電容 1 腳
+    f1 = xy(pad(cfilt, "1"))
+    track(p["48"].GetNetname(), [xy(p["48"]), V(xy(p["48"]).x, f1.y), f1], 0.2)
+    # 2.5V:45 腳 → 過孔 → 電容 1 腳;B.Cu 從這個過孔往西接到西側那排過孔(V2V5_X),一路到 12 腳那個
+    n25 = p["45"].GetNetname()
+    v45 = V(xy(p["45"]).x, xy(p["45"]).y + mm(V45_DY))
+    via(n25, v45)
+    track(n25, [xy(p["45"]), v45, xy(pad(c25, "1"))], 0.25)
+    xb = mm(diff_pairs.V2V5_X + pcbgen.ORIGIN[0])
+    top = xy(p["12"]).y - mm(4.5)          # 3 腳那個過孔
+    track(n25, [v45, V(xb + mm(1.05), v45.y), V(xb, v45.y + mm(1.05)), V(xb, xy(p["12"]).y)], 0.3, pcbnew.B_Cu)
+    if v45.y + mm(1.05) > top:
+        bad.append(f"{u} 2.5V B.Cu 線轉角低於 3 腳的過孔")
+    # 1.2V:21 腳 → 正下方過孔 → B.Cu 接 25 腳的過孔(gen/diff_pairs.py EXTRA_VIAS)
+    n12 = p["21"].GetNetname()
+    v21 = V(xy(p["21"]).x, xy(p["21"]).y + mm(V21_DY))
+    via(n12, v21)
+    track(n12, [xy(p["21"]), v21], 0.25)
+    v25 = V(xy(p["25"]).x + mm(0.95), xy(p["25"]).y + mm(0.85))      # (50.4, 65.6):25 腳往東南那個
+    track(n12, [v21, V(v25.x - (v21.y - v25.y), v21.y), v25], 0.3, pcbnew.B_Cu)
+    # 15 腳(1.2V)夾在 14 腳(+3V3 扇出過孔)與 17–19 腳中間:同樣正下方打過孔,B.Cu 接 21 腳那個
+    v15 = V(xy(p["15"]).x, v21.y)
+    via(n12, v15)
+    track(n12, [xy(p["15"]), v15], 0.25)
+    track(n12, [v15, v21], 0.3, pcbnew.B_Cu)
     return bad
 
 
@@ -668,6 +827,9 @@ if __name__ == "__main__":
     bad += add_feeds(board)
     bad += add_lan_north(board)
     bad += add_crystal_ground(board)
+    bad += add_u20_vcc(board)
+    bad += add_hub_xi(board)
+    bad += add_u10_ss(board)
     bad += add_fanout(board)
     if bad:
         print("!! 電源 / 差分線自檢失敗,拒絕寫出:")

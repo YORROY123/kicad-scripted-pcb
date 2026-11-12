@@ -22,11 +22,22 @@ CLASSES = {          # 名字: (線寬, 對內間距) mm
 CHAMFER = 0.8        # 直角切成兩個 45°,切掉的長度
 VIA_PITCH = 1.0      # 換層處一對過孔的中心距
 SKEW_MAX = 0.1       # 對內長度差上限 mm(CM5 規格書 2.3.1 的 PCIe 值,其他介面一併套用)
-GROUP_SKEW = {"HDMI0": 25.0, "乙太網路": 50.0}  # 同一組對與對之間的長度差上限 mm(CM5 規格書 2.5.1、2.2.1)
+# 例外的上限:MDI(1000BASE-T,125 MBd、符號 8 ns)0.5 mm ≈ 3 ps,可忽略。LAN1 那組從 U41 往北繞到 T41 上方,
+# 段太短放不下補長凸起(而且凸起會往 2.5V 過孔那側長)
+SKEW_LOOSE = {"LAN0 MDI": 0.5, "LAN1 MDI": 0.5}
+GROUP_SKEW = {"HDMI0": 25.0, "乙太網路": 50.0, "LAN0 MDI": 50.0, "LAN1 MDI": 50.0}  # 同一組對與對之間的長度差上限 mm(CM5 規格書 2.5.1、2.2.1)
 KEEP = 0.3          # 自動擺件離差分線(含兩側)至少這麼遠
 VIA_LEN = 1.6        # 一個 F.Cu ↔ B.Cu 過孔的長度 = 板厚(JLC04161H-3313)
 TWIST_VIA = 0.8      # 扭轉時下穿那條的過孔離中心線
 
+
+# PoE 變壓器(G2423S)位置與上排(晶片側)焊盤相對中心的 x:MDI 各對的中心、中心抽頭(TCT1–4)。gen/placement.py 共用
+T_X, T_Y = {"T40": 10.0, "T41": 29.0}, 86.0
+MDI_DX = (-5.08, -1.27, 2.54, 6.35)
+TCT_DX = (-6.985, -3.175, 0.635, 4.445)
+MDI_END_Y = 77.2     # 中心線停在上排焊盤(上緣 77.75)上方,再 45° 分開進焊盤
+TCT_CAP_Y = 76.65    # 中心抽頭電容(0402 轉 0:1 腳在 TCT 腳正上方)
+V2V5_X = 41.15       # LAN7800 2.5V 腳夾在 MDI 各對之間:拉到這裡打過孔
 
 def twist_span(h: float) -> float:
     """扭轉段沿行進方向的長度。"""
@@ -191,10 +202,23 @@ PAIRS = (
         ("D0", 118.9, 26.0, 126.4, 49.4, 77.4, 97.2, 70.0),
         ("CK", 120.1, 27.4, 125.0, 48.0, 76.0, 97.0, 68.5),
     )),
+    # LAN7800 MDI(U40 → T40、U41 → T41)。晶片西側由北到南 TR0…TR3,變壓器上排由西到東 TR0…TR3:
+    # 往西出、左轉往南進焊盤,手性與先後順序天生一致,不用交叉。
+    # LAN0:往西時斜上收到間距 1 mm(BT50 南緣),在 C83 東邊往南,T40 上方往西各自下去。
+    # LAN1:U41 的西腳跟 T41 上排差不多高,先往北繞到 T41 上方再往西,各自下去。
+    # 中心抽頭電容在上排兩對之間(TCT 腳正上方,見 TCT_DX)。
+    *((f"LAN0 MDI TR{k}", f"LAN0_TR{k}P", f"LAN0_TR{k}N", "100", ("U40",), ("T40",), [
+        ("F.Cu", [(41.7, yk), (38.5, yk), (38.5 - (yk - yj), yj), (vk, yj), (vk, yl), (dk, yl), (dk, MDI_END_Y)]),
+    ]) for k, yk, yj, vk, yl, dk in ((k, 59.5 + 1.5 * k, 58.2 + k, 15.85 + k, 72.8 + k, T_X["T40"] + MDI_DX[k])
+                                     for k in range(4))),
+    *((f"LAN1 MDI TR{k}", f"LAN1_TR{k}P", f"LAN1_TR{k}N", "100", ("U41",), ("T41",), [
+        ("F.Cu", [(41.9, yk), (vk, yk), (vk, yl), (dk, yl), (dk, MDI_END_Y)]),
+    ]) for k, yk, vk, yl, dk in ((k, 75.5 + 1.5 * k, 40.9 - k, 72.9 + k, T_X["T41"] + MDI_DX[k]) for k in range(4))),
 )
 # 終點焊盤的 P、N 中間夾著別的焊盤(J70 每對中間是地腳):最後一點之後先 45° 分開到焊盤正上方再直下
 FAN = {"HDMI0 D2", "HDMI0 D1", "HDMI0 D0", "HDMI0 CK",
-       "乙太網路 0", "乙太網路 1", "乙太網路 2", "乙太網路 3"}
+       "乙太網路 0", "乙太網路 1", "乙太網路 2", "乙太網路 3",
+       *(f"LAN{i} MDI TR{k}" for i in (0, 1) for k in range(4))}
 
 # 縫合電容:差分線換到 B.Cu 時參考面從 In1(GND)換成 In2(電源),回流要從 GND 跨到電源平面;
 # 每處換層旁放一顆 100 nF(GND ↔ 該處 In2 的電源),兩端各一個過孔接內層平面。位置是在換層過孔
@@ -247,6 +271,14 @@ EXTRA_TRACKS = (
     ("LAN0_1V2", "F.Cu", 0.2, [(49.6, 64.75), (50.4, 64.75), (50.4, 65.6)]),
     ("LAN1_1V2", "F.Cu", 0.2, [(49.6, 78.25), (51.1, 78.25)]),           # U41 同上(往南 16 mm)
     ("LAN1_1V2", "F.Cu", 0.2, [(49.6, 80.75), (50.4, 80.75), (50.4, 81.6)]),
+    # LAN7800 的 2.5V(3、6、9、12 腳)夾在 MDI 各對之間:各拉一小段打過孔,到電容交給 freerouting(B.Cu)
+    *((f"LAN{i}_2V5", "F.Cu", 0.2, [(42.55, yc + d), (V2V5_X, yc + d)])
+      for i, yc in ((0, 62.0), (1, 78.0)) for d in (-1.75, -0.25, 1.25, 2.75)),
+    # 中心抽頭:TCT 腳直上接電容 1 腳;電容 2 腳(GND)往北打過孔
+    *((f"POE{i}_TCT{k + 1}", "F.Cu", 0.25, [(T_X[t] + dx, T_Y - 7.3), (T_X[t] + dx, TCT_CAP_Y)])
+      for i, t in ((0, "T40"), (1, "T41")) for k, dx in enumerate(TCT_DX)),
+    *(("GND", "F.Cu", 0.25, [(T_X[t] + dx + 0.96, TCT_CAP_Y), (T_X[t] + dx + 0.96, TCT_CAP_Y - 0.7)])
+      for t in ("T40", "T41") for dx in TCT_DX),
     # M.2 地腳(51、45、39)→ 旁邊的地過孔
     ("GND", "F.Cu", 0.25, [(4.3, 11.75), (5.725, 11.75)]),
     ("GND", "F.Cu", 0.25, [(4.3, 13.25), (5.725, 13.25)]),
@@ -266,6 +298,8 @@ EXTRA_TRACKS = (
 EXTRA_VIAS = (
     ("LAN0_1V2", 51.1, 62.25), ("LAN0_1V2", 50.4, 65.6),
     ("LAN1_1V2", 51.1, 78.25), ("LAN1_1V2", 50.4, 81.6),
+    *((f"LAN{i}_2V5", V2V5_X, yc + d) for i, yc in ((0, 62.0), (1, 78.0)) for d in (-1.75, -0.25, 1.25, 2.75)),
+    *(("GND", T_X[t] + dx + 0.96, TCT_CAP_Y - 0.7) for t in ("T40", "T41") for dx in TCT_DX),
     # M.2 奇數排的地腳夾在 PCIe 各對之間,外側被走線圍住:就地打到 In1
     ("GND", 4.3, 11.75), ("GND", 4.3, 13.25), ("GND", 4.45, 14.75),
     *(("GND", x, 110.7) for x in (73.0, 71.5, 70.0, 68.5)),
@@ -432,14 +466,15 @@ def route(pair, start: dict, end: dict, pads=None):
                 length[key] += math.dist(cur, end[key])
     length = {k: length[k] + via_len[k] for k in length}
     skew = abs(length["P"] - length["N"])
+    limit = next((v for g, v in SKEW_LOOSE.items() if name.startswith(g + " ")), SKEW_MAX)
     if skew > SKEW_MAX:
         short = pnet if length["P"] < length["N"] else nnet
         if _compensate(tracks, short, pnet if short == nnet else nnet, skew, *BUMP.get(name, (BUMP_MAX, 1.0))):
             length = {k: sum(_length(t[3]) for t in tracks if t[0] == net) + via_len[k]
                       for k, net in (("P", pnet), ("N", nnet))}
             skew = abs(length["P"] - length["N"])
-        if skew > SKEW_MAX:
-            problems.append(f"{name}:對內長度差 {skew:.3f} mm > {SKEW_MAX} mm")
+        if skew > limit:
+            problems.append(f"{name}:對內長度差 {skew:.3f} mm > {limit} mm")
     return tracks, vias, length, problems
 
 
