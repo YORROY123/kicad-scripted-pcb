@@ -94,11 +94,17 @@ def fanout(board, plane_layer_of: dict, via_d: float, via_drill: float, width_of
         pt = pcbnew.VECTOR2I(_nm(x), _nm(y))
         return any(f.Contains(pt) for f in planes.get((net, plane_layer_of[net]), []))
 
+    def is_ep(p):
+        sx, sy = _mm(p.GetBoundingBox().GetWidth()), _mm(p.GetBoundingBox().GetHeight())
+        return EP_MIN <= min(sx, sy) and max(sx, sy) <= EP_MAX and max(sx, sy) / min(sx, sy) < 1.2
+
     placed, skipped = 0, []
+    # 同一顆器件的散熱焊盤先做:走線接到 EP 的腳(cm5 U10 6、8 腳、LAN7800 43 腳)要看得到散熱過孔,
+    # 不然會另外打一個扇出過孔(腳號照字串排,"43" 會排在 "49" 前面)
     pads = sorted((p for p in board.GetPads()
                    if p.GetNetname() in plane_layer_of and p.GetAttribute() == pcbnew.PAD_ATTRIB_SMD
                    and p.IsOnLayer(F)),
-                  key=lambda p: (p.GetParentFootprint().GetReference(), p.GetNumber()))
+                  key=lambda p: (p.GetParentFootprint().GetReference(), not is_ep(p), p.GetNumber()))
     for pad in pads:
         net = pad.GetNetname()
         name = f"{pad.GetParentFootprint().GetReference()}.{pad.GetNumber()}"
@@ -108,7 +114,7 @@ def fanout(board, plane_layer_of: dict, via_d: float, via_drill: float, width_of
         fp = pad.GetParentFootprint()
         px, py = _mm(pad.GetX()), _mm(pad.GetY())
         sx, sy = _mm(pad.GetBoundingBox().GetWidth()), _mm(pad.GetBoundingBox().GetHeight())
-        if EP_MIN <= min(sx, sy) and max(sx, sy) <= EP_MAX and max(sx, sy) / min(sx, sy) < 1.2:
+        if is_ep(pad):
             reach = max(sx, sy)
             near[:] = [(L, n, sh) for L, n, sh, (x0, y0, x1, y1) in obstacles
                        if x0 < px + reach and x1 > px - reach and y0 < py + reach and y1 > py - reach]

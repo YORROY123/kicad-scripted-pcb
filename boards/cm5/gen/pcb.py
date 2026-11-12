@@ -324,6 +324,117 @@ def class_clearance(net: str) -> float:
     return pcbgen.CLEARANCE if net in POWER else DEFAULT_CLASS[1]
 
 
+# 晶振的兩支 GND 腳(2、4,斜對角)在晶振底下用一段線接起來,只留一個過孔:扇出原本兩支腳各打一個,
+# 往外的那個剛好落在 XI 或 XO 繞過去的路上(LAN7800 的 XO 從晶振西南角繞上去、Hub 的 XI 從東南角往西)。
+# 過孔自己放(扇出只在散熱焊盤之後重算連線,2 腳打的過孔 4 腳看不到,會再打一個):(位號, 哪支 GND 腳外側, 偏移 mm)
+CRYSTAL_GND = (("Y40", "2", (0.9, -0.6)), ("Y41", "2", (0.9, -0.6)), ("Y60", "4", (-0.9, -0.25)))
+
+
+def add_crystal_ground(board) -> list[str]:
+    gnd = board.FindNet("GND")
+    for ref, via_pad, off in CRYSTAL_GND:
+        fp = board.FindFootprintByReference(ref)
+        pads = {p.GetNumber(): p for p in fp.Pads()}
+        if pads["2"].GetNetname() != "GND" or pads["4"].GetNetname() != "GND":
+            return [f"{ref} 的 2、4 腳不是 GND"]
+        ends = [(pads["2"].GetPosition(), pads["4"].GetPosition())]
+        at = pads[via_pad].GetPosition() + pcbnew.VECTOR2I(pcbgen.mm(off[0]), pcbgen.mm(off[1]))
+        v = pcbnew.PCB_VIA(board)
+        v.SetPosition(at)
+        v.SetWidth(pcbgen.mm(pcbgen.VIA_D))
+        v.SetDrill(pcbgen.mm(pcbgen.VIA_DRILL))
+        v.SetNet(gnd)
+        v.SetLocked(True)
+        board.Add(v)
+        ends.append((pads[via_pad].GetPosition(), at))
+        for a, b in ends:
+            t = pcbnew.PCB_TRACK(board)
+            t.SetLayer(pcbnew.F_Cu)
+            t.SetStart(a)
+            t.SetEnd(b)
+            t.SetWidth(pcbgen.mm(0.25))
+            t.SetNet(gnd)
+            t.SetLocked(True)
+            board.Add(t)
+    return []
+
+
+# LAN7800 北側手佈(gen/placement.py 的擺法):晶振轉 90°,XI(1 腳)在右下、XO(3 腳)在左上。
+# - XI:40 腳直上進晶振 1 腳,再往東接負載電容。
+# - XO:41 腳直上,在 1.2V 電容的 GND 過孔上方往西,沿晶振西側上去接 3 腳與負載電容 —— 不和 XI 交叉。
+# - 42、44 腳(1.2V)在 43 腳上方用一段橫線接起來,1.2V 電容的 1 腳就壓在這段線上;
+#   43 腳(PME_MODE,接地)往內接散熱焊盤,不必往外拉線。
+# - 1.2V 電容的 GND 過孔手放(扇出會放在 XO 要走的地方)。
+# (晶片, 晶振, XI 負載電容, XO 負載電容, 1.2V 電容)
+LAN_NORTH = (("U40", "Y40", "C118", "C119", "C114"), ("U41", "Y41", "C148", "C149", "C143"))
+XO_WEST_X = -0.9    # XO 往上那段:晶振 3 腳中心往西 mm(離晶振 GND 腳 0.25、C109 的 GND 過孔 0.375)
+CAP_VIA_DY = -0.72  # 1.2V 電容 GND 過孔:2 腳中心往北 mm
+XO_ABOVE_VIA = 0.6  # XO 往西那段:過孔中心再往北 mm(過孔半徑 0.3 + GND 的 Power 類間距 0.2 + 半線寬 0.075)
+LINK_DY = -0.85     # 42–44 橫線:腳中心往北 mm(離 43 腳焊盤 0.33)
+
+
+def add_lan_north(board) -> list[str]:
+    from pcbnew import VECTOR2I as V
+
+    def track(net, pts, w):
+        for a, b in zip(pts, pts[1:]):
+            t = pcbnew.PCB_TRACK(board)
+            t.SetLayer(pcbnew.F_Cu)
+            t.SetStart(a)
+            t.SetEnd(b)
+            t.SetWidth(pcbgen.mm(w))
+            t.SetNet(board.FindNet(net))
+            t.SetLocked(True)
+            board.Add(t)
+
+    def pad(ref, num):
+        return {p.GetNumber(): p for p in board.FindFootprintByReference(ref).Pads()}[num]
+
+    def xy(p):
+        return p.GetPosition()
+
+    bad = []
+    for u, y, cxi, cxo, c12 in LAN_NORTH:
+        p40, p41, p42, p43, p44 = (pad(u, n) for n in ("40", "41", "42", "43", "44"))
+        xi, xo = pad(y, "1"), pad(y, "3")
+        want = ((p40, "_XI"), (p41, "_XO"), (xi, "_XI"), (xo, "_XO"), (p42, "_1V2"), (p44, "_1V2"))
+        for p, suffix in want:
+            if not p.GetNetname().endswith(suffix):
+                bad.append(f"{u} 北側手佈:{p.GetParentFootprint().GetReference()}.{p.GetNumber()} 是 {p.GetNetname()}")
+        if p43.GetNetname() != "GND" or pad(c12, "2").GetNetname() != "GND":
+            bad.append(f"{u} 北側手佈:43 腳或 {c12}.2 不是 GND")
+        if bad:
+            return bad
+        net = lambda p: p.GetNetname()  # noqa: E731
+        # XI:40 腳直上到晶振 1 腳的高度,再往東經 1 腳中心到負載電容
+        track(net(p40), [xy(p40), V(xy(p40).x, xy(xi).y), xy(xi), xy(pad(cxi, "1"))], 0.15)
+        # 1.2V 電容 GND 過孔
+        c2 = xy(pad(c12, "2"))
+        via_at = V(c2.x, c2.y + pcbgen.mm(CAP_VIA_DY))
+        v = pcbnew.PCB_VIA(board)
+        v.SetPosition(via_at)
+        v.SetWidth(pcbgen.mm(pcbgen.VIA_D))
+        v.SetDrill(pcbgen.mm(pcbgen.VIA_DRILL))
+        v.SetNet(board.FindNet("GND"))
+        v.SetLocked(True)
+        board.Add(v)
+        track("GND", [c2, via_at], 0.25)
+        # XO
+        yj = via_at.y - pcbgen.mm(XO_ABOVE_VIA)
+        xw = xy(xo).x + pcbgen.mm(XO_WEST_X)
+        track(net(p41), [xy(p41), V(xy(p41).x, yj), V(xw, yj), V(xw, xy(xo).y), xy(xo)], 0.15)
+        track(net(p41), [V(xw, xy(xo).y), xy(pad(cxo, "1"))], 0.15)
+        # 42–44 橫線 + 1.2V 電容 1 腳
+        yl = xy(p42).y + pcbgen.mm(LINK_DY)
+        c1 = xy(pad(c12, "1"))
+        track(net(p42), [xy(p44), V(xy(p44).x, yl), V(xy(p42).x, yl), xy(p42)], 0.2)
+        track(net(p42), [V(c1.x, yl), c1], 0.2)
+        # 43 腳往內接散熱焊盤
+        ep = xy(pad(u, "49"))
+        track("GND", [xy(p43), V(xy(p43).x, xy(p43).y + (pcbgen.mm(1.2) if ep.y > xy(p43).y else -pcbgen.mm(1.2)))], 0.2)
+    return bad
+
+
 # 平面網路 → 內層。這些網的 SMD 焊盤由 lib/fanout.py 先打好過孔(freerouting 不在平面層走線,也就不扇出)
 PLANE_NETS = {"GND": pcbnew.In1_Cu, "+3V3": pcbnew.In2_Cu, "+5V": pcbnew.In2_Cu}
 
@@ -555,6 +666,8 @@ if __name__ == "__main__":
     bad += add_power_stage(board)
     bad += add_diff_pairs(board)
     bad += add_feeds(board)
+    bad += add_lan_north(board)
+    bad += add_crystal_ground(board)
     bad += add_fanout(board)
     if bad:
         print("!! 電源 / 差分線自檢失敗,拒絕寫出:")
