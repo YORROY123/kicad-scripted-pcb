@@ -41,7 +41,7 @@ def export_dsn(pcb: Path, dsn: Path, only: set = None) -> None:
         text = plane_layers_off(text, planes, signal)
         print(f"  {', '.join(planes)}:只接平面、不走线(use_layer {' '.join(signal)})")
     if only:
-        text = only_nets(text, only)
+        text = only_nets(text, only, grow=lambda base: grown_obstacles(board, only, base))
         print(f"  只布 {len(only)} 个网:{' '.join(sorted(only))}")
     dsn.write_text(text, encoding="utf-8")
     print(f"wrote {dsn.name}")
@@ -111,12 +111,16 @@ def sexp_dump(node, depth: int = 0) -> str:
         pad + sexp_dump(c, depth + 1) for c in node if isinstance(c, list)) + ")"
 
 
-def only_nets(text: str, keep: set, outer=("F.Cu", "B.Cu")) -> str:
+def only_nets(text: str, keep: set, outer=("F.Cu", "B.Cu"), grow=None) -> str:
     """只留 keep 里的网给 freerouting 布(分阶段布线的第一阶段:回授、晶振这些要先占好位置的线)。
 
     其他网从 network 与类别里拿掉:它们的焊盘变成没有网的障碍;已经画好的线、过孔去掉 (net …)
     变成障碍;外层铜区(别的网的鋪銅)改成 keepout,内层平面拿掉(过孔要穿过去,真板上会让开)。
-    留下的网间距取全板最大的类别间距(障碍没有网,freerouting 不知道它们的类别)。"""
+
+    障碍没有网,freerouting 只用板子层级的间距算它们,不知道它们原本的类别。间距取「留下的网
+    所属类别」里最大的(base);类别间距比 base 大的障碍,由 grow(base) 给出加大过的 keepout
+    补上差额。原本一律取全板最大(0.25):0.4 mm 间距的 CM5 连接器、LAN7800 QFN 脚出线要
+    ≤0.225,GPIO、PCIe 边带、LED 这些网整批佈不通(cm5 两种分批都卡在未接 112)。"""
     tree = sexp_parse(text)
     def name(n):
         return n.strip('"')
@@ -125,11 +129,13 @@ def only_nets(text: str, keep: set, outer=("F.Cu", "B.Cu")) -> str:
         if not isinstance(sec, list) or not sec:
             continue
         if sec[0] == "network":
-            # 留下的网的间距一律取全板最大:没有网的障碍,freerouting 只用走线这一边的类别间距
-            # (cm5 第一次:FB 离 +54V 焊盘 0.233 < HV54 0.25,共 21 处)
+            # 留下的网的间距取它们类别里最大的(base):没有网的障碍,freerouting 只用走线这一边的
+            # 类别间距(cm5 第一次:FB 离 +54V 焊盘 0.233 < HV54 0.25,共 21 处 → 由 grow 补上)
             rules = [r for c in sec if isinstance(c, list) and c[0] == "class"
+                     and any(not isinstance(t, list) and name(t) in keep for t in c[2:])
                      for r in c if isinstance(r, list) and r[0] == "rule"]
-            worst = max(float(x[1]) for r in rules for x in r if isinstance(x, list) and x[0] == "clearance")
+            worst = max((float(x[1]) for r in rules for x in r if isinstance(x, list) and x[0] == "clearance"),
+                        default=0.0)
             for r in rules:
                 for x in r:
                     if isinstance(x, list) and x[0] == "clearance":
@@ -165,11 +171,59 @@ def only_nets(text: str, keep: set, outer=("F.Cu", "B.Cu")) -> str:
                     c = ["keepout", '""', c[2]]
                 out.append(c)
             sec[:] = out
+            structure = sec
+    if grow:
+        structure.extend(sexp_parse("(x " + " ".join(grow(worst)) + ")")[1:])
     missing = keep - found
     if missing:
         raise SystemExit(f"DSN 里没有这些网:{', '.join(sorted(missing))}")
     out = sexp_dump(tree).replace("(string_quote QUOTE_CHAR)", QUOTE)
     return out.replace("WORST_CLEARANCE", f"{worst:g}") + "\n"
+
+
+def grown_obstacles(board, keep: set, base_um: float, layers=(pcbnew.F_Cu, pcbnew.B_Cu)) -> list:
+    """别的网的焊盘、线、过孔、铜区,自身间距比 base 大的:外扩差额,变成 keepout。
+
+    freerouting 对 keepout 也是用 base 的间距,外扩后加起来正好是原本的类别间距
+    (例:HV54 0.25 的焊盘外扩 0.1,GPIO 0.15 的线离它仍 ≥0.25)。"""
+    base = base_um * 1000  # DSN 单位 µm → KiCad nm
+    out = []
+
+    def emit(item, layer, extra):
+        sps = pcbnew.SHAPE_POLY_SET()
+        item.TransformShapeToPolygon(sps, layer, int(extra), mm(0.005), pcbnew.ERROR_OUTSIDE)
+        for i in range(sps.OutlineCount()):
+            ol = sps.Outline(i)
+            pts = [ol.CPoint(j) for j in range(ol.PointCount())] + [ol.CPoint(0)]
+            xy = "  ".join(f"{p.x / 1000:g} {-p.y / 1000:g}" for p in pts)
+            out.append(f'(keepout "" (polygon {board.GetLayerName(layer)} 0  {xy}))')
+
+    items = list(board.GetPads()) + list(board.GetTracks())
+    for it in items:
+        if it.GetNetname() in keep or it.GetNetCode() <= 0:
+            continue
+        for layer in layers:
+            if it.IsOnLayer(layer):
+                extra = it.GetOwnClearance(layer) - base
+                if extra > 0:
+                    emit(it, layer, extra)
+    for z in board.Zones():
+        if z.GetIsRuleArea() or z.GetNetname() in keep:
+            continue
+        for layer in layers:
+            if not z.IsOnLayer(layer):
+                continue
+            extra = z.GetOwnClearance(layer) - base
+            if extra <= 0:
+                continue
+            fill = z.GetFilledPolysList(layer).CloneDropTriangulation()
+            fill.Inflate(int(extra), pcbnew.CORNER_STRATEGY_ROUND_ALL_CORNERS, mm(0.005))
+            for i in range(fill.OutlineCount()):
+                ol = fill.Outline(i)
+                pts = [ol.CPoint(j) for j in range(ol.PointCount())] + [ol.CPoint(0)]
+                xy = "  ".join(f"{p.x / 1000:g} {-p.y / 1000:g}" for p in pts)
+                out.append(f'(keepout "" (polygon {board.GetLayerName(layer)} 0  {xy}))')
+    return out
 
 
 def plane_layers_off(text: str, planes: list, signal: list) -> str:

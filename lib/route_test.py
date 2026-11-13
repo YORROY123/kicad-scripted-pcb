@@ -159,14 +159,18 @@ STAGE_DSN = """(pcb "x.dsn"
 
 
 def stage_nets():
-    out = only_nets(STAGE_DSN, {"FB", "odd (name)"})
+    seen = []
+    out = only_nets(STAGE_DSN, {"FB", "odd (name)"},
+                    grow=lambda base: seen.append(base) or ['(keepout "" (polygon F.Cu 0  0 0  1 0  1 1  0 0))'])
     tree = sexp_parse(out)
     sec = {c[0]: c for c in tree if isinstance(c, list)}
     nets = [c[1] for c in sec["network"] if c[0] == "net"]
     classes = [c[1] for c in sec["network"] if c[0] == "class"]
     assert nets == ["FB", '"odd (name)"'] and classes == ["kicad_default"], out
-    # 类别与板子层级(没有网的障碍用它)都取被拿掉的 Power 的间距;smd_smd 不动
-    assert out.count("(clearance 250)") == 2 and "(clearance 150)" not in out, out
+    # 类别与板子层级(没有网的障碍用它)取留下的网的类别间距 150,不是被拿掉的 Power 250
+    # (Power 的障碍由 grow 外扩补差额);smd_smd 不动
+    assert out.count("(clearance 150)") == 2 and "(clearance 250)" not in out, out
+    assert seen == [150.0], seen
     assert "(clearance 37.5 (type smd_smd))" in out, out
     # GND 的线变成没有网的障碍,FB 的过孔照旧带网
     wire, via = sec["wiring"][1], sec["wiring"][2]
@@ -174,7 +178,7 @@ def stage_nets():
     assert ["net", "FB"] in via, out
     # 外层 GND 鋪銅 -> keepout,内层 GND 平面拿掉,FB 自己的 plane 留着
     kinds = [(c[0], c[-1][1]) for c in sec["structure"] if c[0] in ("plane", "keepout")]
-    assert kinds == [("keepout", "F.Cu"), ("plane", "B.Cu")], kinds
+    assert kinds == [("keepout", "F.Cu"), ("plane", "B.Cu"), ("keepout", "F.Cu")], kinds
     assert '(string_quote ")' in out, out
     try:
         only_nets(STAGE_DSN, {"FB", "NOPE"})
