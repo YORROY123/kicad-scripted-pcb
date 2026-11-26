@@ -59,7 +59,7 @@ the exported netlist with pcbnew.
 
 ## Things that cost time (so they don't cost yours)
 
-- **freerouting-cli 2.5.0 crashes** on KiCad 10 DSN files ([freerouting#957](https://github.com/freerouting/freerouting/issues/957)). Use the jar, which needs Java 25.
+- **freerouting-cli 2.5.0 crashes** on KiCad 10 DSN files ([freerouting#957](https://github.com/freerouting/freerouting/issues/957), fixed in 2.6.0). The build uses the jar, which needs Java 25.
 - freerouting's **automatic neck-down** narrows tracks to 0.125 mm beside 0402 pads, below JLCPCB's 0.127 mm minimum. Use `--router.automatic_neckdown=false --router.neck_width_um=150`.
 - The DSN carries no copper-to-edge rule. Pass `--router.copper_to_edge_clearance_um`. That setting **does not cover internal slots**, so put keepouts around slots.
 - Net classes live in `.kicad_pro`, not `.kicad_pcb`. Save with `pcbnew.SaveBoard()`, which writes both.
@@ -73,7 +73,7 @@ the exported netlist with pcbnew.
 - [KiCad 10](https://www.kicad.org/) (uses its bundled Python for pcbnew, and its ngspice). Set `KICAD_BIN` / `KICAD_SHARE` if it is not in the default location.
 - Python 3.10+ on PATH for schematic generation and the design review (standard library only). The simulations and the field solver need `numpy`, `scipy` and `matplotlib`.
 - Network access only for `lib/lcsc.py` (JLCPCB parts API). The build itself runs offline.
-- freerouting 2.5.0 jar + a Java 25 runtime. Run `tools\setup-tools.ps1` once; it downloads both into `tools\` with pinned SHA-256 checks.
+- freerouting 2.6.0 jar + a Java 25 runtime. Run `tools\setup-tools.ps1` once; it downloads both into `tools\` with pinned SHA-256 checks.
 
 ## Quick start
 

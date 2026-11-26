@@ -18,7 +18,7 @@ $kpy = Join-Path $kicad 'python.exe'     # KiCad's bundled Python: the only one 
 
 $java = Get-ChildItem "$Repo\tools\jre\*\bin\java.exe" -ErrorAction SilentlyContinue |
     Select-Object -First 1 -ExpandProperty FullName
-$fr = "$Repo\tools\freerouting\freerouting-2.5.0.jar"
+$fr = "$Repo\tools\freerouting\freerouting-2.6.0.jar"
 if (-not $java -or -not (Test-Path $fr)) {
     throw 'freerouting or its Java runtime is missing. Run tools\setup-tools.ps1 once.'
 }

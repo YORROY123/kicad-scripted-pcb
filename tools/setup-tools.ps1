@@ -1,12 +1,13 @@
 # Download the two third-party tools the build scripts need into tools\ (git-ignored):
-#   - freerouting 2.5.0 (GPL-3.0) jar      https://github.com/freerouting/freerouting
+#   - freerouting 2.6.0 (GPL-3.0) jar      https://github.com/freerouting/freerouting
 #   - Eclipse Temurin 25 JRE (portable zip) https://adoptium.net
 # Nothing is installed system-wide and PATH is not touched. Every download is checked
 # against a pinned SHA-256; a mismatch stops the script and deletes the file.
 #
-# Why the jar and not freerouting's native CLI: freerouting-cli 2.5.0 crashes on the first
-# board snapshot for KiCad 10 DSN files (freerouting/freerouting#957). The jar is compiled
-# for Java 25 (class file 69), hence the bundled JRE.
+# Why the jar and not freerouting's native CLI: freerouting-cli 2.5.0 crashed on the first
+# board snapshot for KiCad 10 DSN files (freerouting/freerouting#957, fixed in 2.6.0 by #966).
+# The jar is one file for Windows and CI alike. It is compiled for Java 25 (class file 69),
+# hence the bundled JRE.
 #   powershell -ExecutionPolicy Bypass -File tools\setup-tools.ps1
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'   # Invoke-WebRequest is very slow with the progress bar
@@ -29,8 +30,8 @@ function Get-Verified($url, $file, $sha256) {
 
 New-Item -ItemType Directory -Force freerouting, jre | Out-Null
 
-Get-Verified 'https://github.com/freerouting/freerouting/releases/download/v2.5.0/freerouting-2.5.0.jar' `
-    'freerouting\freerouting-2.5.0.jar' 'f6f51bb02245e8e717f9359bd260cc9c5c0b1bc0acc8b7cb2cd5b8ffeb5de3c7'
+Get-Verified 'https://github.com/freerouting/freerouting/releases/download/v2.6.0/freerouting-2.6.0.jar' `
+    'freerouting\freerouting-2.6.0.jar' 'a2929fe37767a71d119f52ac99a1615a9aa2b0538742fa514ddafd72a7785729'
 
 $jreZip = 'jre\OpenJDK25U-jre_x64_windows_hotspot_25.0.4.1_1.zip'
 Get-Verified 'https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-jre_x64_windows_hotspot_25.0.4.1_1.zip' `

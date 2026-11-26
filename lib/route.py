@@ -6,9 +6,9 @@
     freerouting          usbc-ldo.dsn → usbc-ldo.ses
     route.py ses         导入 .ses、铺 GND、填充、存档(板上原有的铜区,如内层电源平面,保留)
 
-freerouting 2.5.0 的原生 CLI 在 KiCad 10 的 DSN 上会崩(上游 #957),
-用 jar 版 + Java 25:
-    tools/jre/<jre>/bin/java.exe -jar tools/freerouting/freerouting-2.5.0.jar \
+freerouting 2.5.0 的原生 CLI 在 KiCad 10 的 DSN 上会崩(上游 #957,2.6.0 已修);
+一直用 jar 版 + Java 25(Windows 与 CI 同一个文件):
+    tools/jre/<jre>/bin/java.exe -jar tools/freerouting/freerouting-2.6.0.jar \
         -de usbc-ldo.dsn -do usbc-ldo.ses --router.autorouter.max_passes=30 \
         --gui.enabled=false
 """
@@ -229,7 +229,7 @@ def grown_obstacles(board, keep: set, base_um: float, layers=(pcbnew.F_Cu, pcbne
 def plane_layers_off(text: str, planes: list, signal: list) -> str:
     """电源平面层(KiCad 层类型 power)在 DSN 里改回 signal、每个网络类别加 use_layer 只用其他层。
 
-    freerouting 2.5.0 只在 signal 层上把平面网络(GND、+3V3…)的焊盘用过孔接到平面;层标成 power 时
+    freerouting(2.5.0 实测)只在 signal 层上把平面网络(GND、+3V3…)的焊盘用过孔接到平面;层标成 power 时
     完全不接(cm5 实测:未接 229 条,其中 100 条是平面网络)。它也没有只挡走线、不挡过孔的
     wire_keepout(keepout 连过孔一起挡,平面就接不上)。所以层照样给 signal,改用每个类别的
     (circuit (use_layer …)) 限制走线层:过孔照样穿过平面层,走线只在其他层。"""
@@ -309,8 +309,9 @@ def import_ses(pcb: Path, ses: Path, lock: bool = False) -> None:
         raise SystemExit("ImportSpecctraSES 失败")
     tracks = [t for t in board.GetTracks() if t.Type() == pcbnew.PCB_TRACE_T]
     vias = [t for t in board.GetTracks() if t.Type() == pcbnew.PCB_VIA_T]
-    # freerouting 2.5.0 扇出时会把线收到类别线宽的 60% / 50%,不管 neck_width(上游 #978,
-    # 修在 master、还没发版):cm5 0.15 → 0.09 < 板子最小线宽 0.1。只加宽到最小线宽,间距交给 DRC。
+    # freerouting 2.5.0 扇出时会把线收到类别线宽的 60% / 50%,不管 neck_width(上游 #978):
+    # cm5 0.15 → 0.09 < 板子最小线宽 0.1。2.6.0 已修(#974、#979),这里留作保险:
+    # 只加宽到最小线宽,间距交给 DRC。
     tmin = board.GetDesignSettings().m_TrackMinWidth
     thin = [t for t in tracks if not t.IsLocked() and t.GetWidth() < tmin]
     for t in thin:

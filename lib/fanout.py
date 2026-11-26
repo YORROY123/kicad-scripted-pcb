@@ -1,6 +1,6 @@
 """平面网络的扇出(dogbone):SMD 焊盘旁放一个过孔 + 一段短线,锁定,接到内层平面。
 
-freerouting 2.5.0 的扇出是让焊盘往平面层逃;平面层用 use_layer 排除走线后(lib/route.py
+freerouting(2.5.0 实测)的扇出是让焊盘往平面层逃;平面层用 use_layer 排除走线后(lib/route.py
 plane_layers_off),它一个过孔都不打,平面网络的焊盘就接不上(cm5:扇出 +0 过孔、49 个
 GND / +3V3 焊盘没接)。所以平面网络先在这里扇好,freerouting 只布其余的线。
 
