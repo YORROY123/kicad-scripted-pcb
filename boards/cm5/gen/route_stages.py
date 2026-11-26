@@ -130,6 +130,10 @@ def main():
             break
         best = count
     shutil.copy(WORK / f"{NAME}.kicad_pcb", OUT)
+    # 网路类别存在 .kicad_pro、板子规则在 .kicad_dru;KiCad 只读同名的那两个档,
+    # 少了它们打开 cm5-routed 或跑 DRC 会套预设规则(线宽 0.2、间距 0.2)报一堆假错误
+    for ext in ("kicad_pro", "kicad_dru"):
+        shutil.copy(BOARD / f"{NAME}.{ext}", OUT.with_suffix(f".{ext}"))
     print(f"wrote {OUT.name}:未接 {count}")
 
 
