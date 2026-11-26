@@ -8,11 +8,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 export KICAD_BIN=${KICAD_BIN:-$(dirname "$(command -v kicad-cli)")}
 
-FR=tools/freerouting/freerouting-2.5.0.jar
-FR_SHA=f6f51bb02245e8e717f9359bd260cc9c5c0b1bc0acc8b7cb2cd5b8ffeb5de3c7
+FR=tools/freerouting/freerouting-2.6.0.jar
+FR_SHA=a2929fe37767a71d119f52ac99a1615a9aa2b0538742fa514ddafd72a7785729
 if ! echo "$FR_SHA  $FR" | sha256sum -c --quiet 2>/dev/null; then
     mkdir -p "$(dirname "$FR")"
-    curl -fsSL -o "$FR" https://github.com/freerouting/freerouting/releases/download/v2.5.0/freerouting-2.5.0.jar
+    curl -fsSL -o "$FR" https://github.com/freerouting/freerouting/releases/download/v2.6.0/freerouting-2.6.0.jar
     echo "$FR_SHA  $FR" | sha256sum -c --quiet
 fi
 FR=$(realpath "$FR")

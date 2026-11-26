@@ -30,7 +30,7 @@
 
 ## 踩過的坑
 
-- **freerouting-cli 2.5.0 會崩潰**([#957](https://github.com/freerouting/freerouting/issues/957)),要改用 jar,而 jar 需要 Java 25。
+- **freerouting-cli 2.5.0 會崩潰**([#957](https://github.com/freerouting/freerouting/issues/957),2.6.0 已修),建置用的是 jar,需要 Java 25。
 - freerouting 的**自動收窄**會把 0402 焊盤旁的線收到 0.125 mm,比 JLCPCB 的下限 0.127 mm 還細。要加 `--router.automatic_neckdown=false --router.neck_width_um=150`。
 - DSN 不帶板邊間距,要另外傳 `--router.copper_to_edge_clearance_um`。這個參數**不管板內開槽**,開槽附近要另外放禁止區。
 - 網路類別存在 `.kicad_pro`,不在 `.kicad_pcb`,要用 `pcbnew.SaveBoard()` 才會一併寫出。

@@ -25,7 +25,7 @@ NAME = "cm5"
 WORK = BOARD / "route"
 OUT = BOARD / f"{NAME}-routed.kicad_pcb"
 CLI = Path(sys.executable).with_name("kicad-cli.exe")
-JAR = REPO / "tools" / "freerouting" / "freerouting-2.5.0.jar"
+JAR = REPO / "tools" / "freerouting" / "freerouting-2.6.0.jar"
 
 # 第一阶段:先占位置的关键网与 freerouting 轮数。顺序有关系:晶振最短最挤,回授网其次。
 CRITICAL = [

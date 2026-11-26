@@ -103,7 +103,7 @@ def spec(place: dict) -> BoardSpec:
         copper_layers=4,
         default_class=DEFAULT_CLASS,
         power_width=POWER_W,
-        # freerouting 2.5.0 扇出時無視「關閉收窄」(上游 #973,修正已合併、未發版),會收到 0.1124 mm;
+        # freerouting 2.5.0 扇出時無視「關閉收窄」(上游 #973,2.6.0 已修),會收到 0.1124 mm;
         # JLCPCB 4 層板最小線寬 0.09 mm,0.1 仍做得到
         track_min=0.1,
         # In1 整片 GND(差分線參考面)、In2 電源平面:不能讓 freerouting 在上面走線
