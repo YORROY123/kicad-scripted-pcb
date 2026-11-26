@@ -274,7 +274,7 @@ In2 是 +3V3 區,沒有 +5V 平面可接,由佈線接到供電支線)。DRC 0。
 ### PCB 待辦
 
 1. 佈線:第一階段(電源級鋪銅與過孔)、第二階段(閘極驅動)完成;第三階段(差分線)完成;
-   外層供電支線與平面扇出完成;其餘交給 freerouting(進行中)。freerouting 設定:
+   外層供電支線與平面扇出完成;其餘由 `gen/route_stages.py` 交給 freerouting(結果與剩下的 37 條見下)。freerouting 設定:
    - In1 / In2 在板檔是 power 層;`lib/route.py dsn` 匯出時改回 signal 並在每個類別加
      `(use_layer F.Cu B.Cu)`。標成 power 時 freerouting 完全不把平面網路接到平面(未接 229 條);
      標成 signal 又不限制時,它會在 In1 / In2 上走線、切開 GND 參考面(DRC 抓到 PG_3V3 在 In1)。
@@ -284,6 +284,19 @@ In2 是 +3V3 區,沒有 +5V 平面可接,由佈線接到供電支線)。DRC 0。
      0.1124 mm;JLC 4 層板做得到 0.09。
    - 只跑 1 輪時剩 122 個未連接,集中在 40-pin 的 GPIO(J1 → J80 要穿過整個模組區)與
      LAN7800 / IP804AR / USB2514B 周邊。
+   - **分階段佈線**:`gen/route_stages.py`(KiCad python,約 3–4 小時,不在 build.ps1 裡)讀
+     `cm5.kicad_pcb`,先佈關鍵網(回授、晶振、LAN7800 1V2/2V5)並鎖定,其餘網依間距分組一批一批佈,
+     每輪佈完鎖定,直到未接數不再下降(594 → 關鍵網後 200 → 39 → 38 → 37)。輸出
+     `cm5-routed.kicad_pcb`,旁邊的 `cm5-routed.kicad_pro` / `.kicad_dru` 是網路類別與板子規則
+     (少了它們 KiCad 會套預設規則,DRC 報 698 個假錯誤)。DRC:0 錯誤、37 未接。
+   - **剩下的 37 條未接**(下一步手佈或微調擺位):
+     - USB2514B(U61)南側:HUB_CFG0、HUB_CFG1、HUB_DIS3、HUB_DIS4、HUB_RBIAS、HUB_XO、
+       USBA0_EN、USBA1_OCN(2 段)、USBA1_VBUS,以及 R210 的 GND 過孔。
+     - LAN7800 ×2(U40、U41):+3V3 的 14 / 20 / 46 腳(5 段)與 1 段走線接過孔、LAN0_1V2、LAN1_1V2、
+       LAN0_EEDI、LAN1_EEDI、LAN0_LEDG_K、LAN1_LEDG_K、LAN1_LEDY_K。
+     - 電源:+5V(3 段,其中 1 段是 B.Cu 供電鋪銅自己斷成兩塊)、PG_3V3(3 段,U20)、CM5_3V3
+       (R230、D50)、+3V3 到 L20、IP_3V3(U50 的 20 / 44 腳)、HDMI_5V(J70)。
+     - 40-pin:GPIO10(J1 44 腳 → J80 19 腳,要穿過整個模組區)。
 2. 內層平面已加(見「內層電源平面」);外層電源的線寬已算好(見「外層電源走線」)。`lib/route.py ses`
    匯入時只刪沒鎖定的走線、規則區和它自己上一輪鋪的外層 GND,有名字的銅區與鎖定的走線、過孔會留下
    (`lib/route_test.py` 檢查)。
